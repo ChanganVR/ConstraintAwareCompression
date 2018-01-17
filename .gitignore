@@ -105,3 +105,4 @@ MANIFEST-*
 *.txt
 *.orig
 *_EDT_2016/
+src/libxsmm/bin/
