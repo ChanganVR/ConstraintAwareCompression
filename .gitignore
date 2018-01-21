@@ -106,3 +106,4 @@ MANIFEST-*
 *.orig
 *_EDT_2016/
 src/libxsmm/bin/
+cmake-build-debug/

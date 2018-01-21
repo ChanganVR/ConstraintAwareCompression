@@ -1,3 +1,19 @@
+# Hardware guided network compression
+## For installation
+The sparse convolution implementation in util/sconv.hpp is only available
+for inference given a pruned network.
+For pruning and fine-tuning, compile caffe with GPU option on.
+
+
+## The training/pruning difference between CLIP-Q and Faster CNN
+In CLIP-Q, the pruning percentages are computed by the bayesian optimization,
+once it's done. The network is determined. The remained training process
+is used to fine-tune the pruned network, not for the purpose of pruning.
+In Faster CNN, pruning proceed along with training. It "train the whole
+neural network while actively pruning only Ls in S". Once the training is done,
+ the pruning is done. And this process is controlled by the sgd_solver.cpp
+
+
 ## SkimCaffe Specific Description
 
 A Caffe branch for training sparse CNN that provides 80-95% sparsity in

@@ -121,12 +121,12 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     sum_conv_cycle += conv_cycles_of_this_batch[i*16];
   }
   std::string name(this->layer_param_.name());
-  LOG(INFO) <<
-      name <<
-      " K-cycles-per-file max " << max_conv_cycle/1000./this->num_ <<
-      " avg " << sum_conv_cycle/1000./omp_get_max_threads()/this->num_ <<
-      " mFlops-per-file " << flops/this->num_/1e6 <<
-      " GF/s " << flops/(max_conv_cycle/get_cpu_freq())/1e9;
+//  LOG(INFO) <<
+//      name <<
+//      " K-cycles-per-file max " << max_conv_cycle/1000./this->num_ <<
+//      " avg " << sum_conv_cycle/1000./omp_get_max_threads()/this->num_ <<
+//      " mFlops-per-file " << flops/this->num_/1e6 <<
+//      " GF/s " << flops/(max_conv_cycle/get_cpu_freq())/1e9;
 
   if (total_conv_cycles.find(name) == total_conv_cycles.end()) {
     total_conv_cycles[name] = 0;
