@@ -1,8 +1,8 @@
 # Hardware guided network compression
 ## For installation
 The sparse convolution implementation in util/sconv.hpp is only available
-for inference given a pruned network.
-For pruning and fine-tuning, compile caffe with GPU option on.
+for running inference on cpu.
+For pruning and fine-tuning, run caffe with -gpu 0.
 
 
 ## The training/pruning difference between CLIP-Q and Faster CNN

@@ -107,3 +107,5 @@ MANIFEST-*
 *_EDT_2016/
 src/libxsmm/bin/
 cmake-build-debug/
+changan_clipq_codebase_no_caffe/
+*.log

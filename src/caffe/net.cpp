@@ -625,6 +625,8 @@ template <typename Dtype>
 Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
+  // ROI_MAKER_BEGIN
+  LOG(INFO) << "Start forwarding";
   Dtype loss = 0;
   //Timer timer;
   //double cur_time_total = 0;
@@ -642,6 +644,8 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
     loss += layer_loss;
     if (debug_info_) { ForwardDebugInfo(i); }
   }
+  //ROI_MARKER_END
+  LOG(INFO) << "End forwarding";
   //LOG(INFO) << "Total time in this iteration: " << "\t("<<cur_time_total<<" us)";
   //total_time_ += cur_time_total;
   return loss;
@@ -678,6 +682,7 @@ Dtype Net<Dtype>::ForwardTo(int end) {
 
 template <typename Dtype>
 const vector<Blob<Dtype>*>& Net<Dtype>::Forward(Dtype* loss) {
+
   if (loss != NULL) {
     *loss = ForwardFromTo(0, layers_.size() - 1);
   } else {
