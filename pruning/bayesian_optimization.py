@@ -1,6 +1,6 @@
 import logging
 from bayes_opt import BayesianOptimization
-from pruning import alexnet_target_function
+from calculate_objective import alexnet_target_function
 
 
 def optimize():
@@ -34,7 +34,8 @@ def optimize():
     # Once we are satisfied with the initialization conditions
     # we let the algorithm do its magic by calling the maximize()
     # method.
-    bo.maximize(init_points=5, n_iter=15, kappa=2)
+    # should set multistep maximization with changing kappa
+    bo.maximize(init_points=10, n_iter=80, kappa=5)
 
     # The output values can be accessed with self.res
     logging.info(bo.res['max'])
