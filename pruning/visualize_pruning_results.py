@@ -1,6 +1,8 @@
 from __future__ import print_function
+from __future__ import division
 import sys
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 class Result(object):
@@ -23,6 +25,10 @@ class Result(object):
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
         string += "{:<20} {:.2f}".format('Objective:', self.objective_value)
         return string
+
+    @staticmethod
+    def get_latency(result):
+        return result.latency
 
 
 def read_log(log_file):
@@ -74,10 +80,41 @@ def plot_accuracy_latency_curve(results):
     plt.show()
 
 
+def area_under_curve_diff(results, original_latency, accuracy_range=(0, 0.5), bin_width=0.01):
+    # calculate the AUC difference for the last sampled set of parameters
+    # the problem with using AUC is that with the same sampled parameter, the objective may be different,
+    # which depends on the history of sampled parameters
+    # the problem of using AUC difference is, as BO goes on, AUC difference is smaller and smaller
+    # and is not the same as our real objective
+    # Both of them violate the bayesian process assumption (continuity)
+    last_area = area_under_curve(results[:-1], original_latency, accuracy_range, bin_width)
+    current_area = area_under_curve(results, original_latency, accuracy_range, bin_width)
+    return last_area - current_area
+
+
+def area_under_curve(results, original_latency, accuracy_range=(0.2, 0.5), bin_width=0.01):
+    # accuracy_dict stores accuracy range as key and its corresponding latencies as value
+    accuracy_dict = defaultdict(list)
+    for result in results:
+        if accuracy_range[0] <= result.accuracy <= accuracy_range[1]:
+            key = int((result.accuracy-accuracy_range[0])/bin_width)
+            accuracy_dict[key].append(result)
+
+    area = 0
+    for i in range(int((accuracy_range[1]-accuracy_range[0])/bin_width)):
+        # even the bin doesn't have any points
+        if i not in accuracy_dict:
+            area += bin_width * original_latency
+        else:
+            area += bin_width * min(accuracy_dict[i], key=Result.get_latency).latency
+    return area
+
+
 if __name__ == '__main__':
     res = read_log(sys.argv[1])
     print('Number of iterations:', len(res))
     find_max_objective(res)
+    print(area_under_curve(res, 2352))
     plot_accuracy_latency_curve(res)
 
 

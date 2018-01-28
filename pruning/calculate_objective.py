@@ -4,6 +4,7 @@ import time
 import os
 import logging
 import json
+from visualize_pruning_results import read_log, area_under_curve_diff
 
 
 os.environ['OMP_NUM_THREADS'] = '4'
@@ -42,9 +43,13 @@ def alexnet_target_function(**pruning_percentage_dict):
     accuracy = test_accuracy(original_prototxt_file, temp_caffemodel_file)
 
     # objective is function of accuracy and latency
-    objective = accuracy * 100 + alpha * (original_latency - latency)
     logging.info('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))
+    objective = accuracy * 100 + alpha * (original_latency - latency)
     logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
+
+    # using under curve area as optimization objective
+    results = read_log('results/pruning_area_10_80_10_2.log)')
+    objective = area_under_curve_diff(results, original_latency)
 
     return objective
 
