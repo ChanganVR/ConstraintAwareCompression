@@ -34,7 +34,7 @@ def optimize(kappa_decay):
     # Once we are satisfied with the initialization conditions
     # we let the algorithm do its magic by calling the maximize() method.
     init_points = 10
-    n_iter = 80
+    n_iter = 1200
     kappa_upper = 10
     kappa_lower = 2
     kappa_decay = True
@@ -43,7 +43,7 @@ def optimize(kappa_decay):
                             filemode='w', level=logging.INFO)
         bo.maximize(init_points=10, n_iter=80, kappa=5)
     else:
-        logging.basicConfig(filename='results/pruning_area_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_upper, kappa_lower),
+        logging.basicConfig(filename='results/pruning_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_upper, kappa_lower),
                             filemode='w', level=logging.INFO)
         bo.maximize(init_points=10, n_iter=0, kappa=5)
         for i in range(1, n_iter+1):

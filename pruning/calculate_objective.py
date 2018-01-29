@@ -12,13 +12,19 @@ os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 
 original_latency = 0
 
+ITERATION_COUNTER = 0
+TOTAL_ITERATIONS = 1200
+
 
 def alexnet_target_function(**pruning_percentage_dict):
     start = time.time()
     # hyper importance factor alpha and beta
     # TODO: how to approximate the final accuracy better
     # trade off 1 percent estimated accuracy(without training) for 50 ms final speedup (latency difference)
-    latency_tradeoff = 50
+    global ITERATION_COUNTER
+    global TOTAL_ITERATIONS
+    latency_tradeoff = 50 + (1-50) / TOTAL_ITERATIONS * ITERATION_COUNTER
+    ITERATION_COUNTER += 1
     alpha = 1 / latency_tradeoff
     beta = 0.2
     test_iters = 3
@@ -48,8 +54,8 @@ def alexnet_target_function(**pruning_percentage_dict):
     logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
 
     # using under curve area as optimization objective
-    results = read_log('results/pruning_area_10_80_10_2.log)')
-    objective = area_under_curve_diff(results, original_latency)
+    # results = read_log('results/pruning_area_10_80_10_2.log)')
+    # objective = area_under_curve_diff(results, original_latency)
 
     return objective
 
