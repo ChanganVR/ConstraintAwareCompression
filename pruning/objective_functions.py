@@ -12,13 +12,13 @@ os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 original_latency = 0
 
 
-def alexnet_target_function(**pruning_percentage_dict):
+def alexnet_objective_function(**pruning_percentage_dict):
     start = time.time()
     # hyper importance factor alpha and beta
     # trade off 1 percent estimated accuracy(without training) for 50 ms final speedup (latency difference)
-    if not hasattr(alexnet_target_function, 'latency_tradeoff'):
+    if not hasattr(alexnet_objective_function, 'latency_tradeoff'):
         raise ValueError('Latency tradeoff factor for alexnet target function is not set')
-    alpha = 1 / alexnet_target_function.latency_tradeoff
+    alpha = 1 / alexnet_objective_function.latency_tradeoff
     test_iters = 3
 
     # prune the network according to the parameters
@@ -30,11 +30,13 @@ def alexnet_target_function(**pruning_percentage_dict):
     # test original caffemodel latency with sconv
     global original_latency
     if original_latency == 0:
-        original_latency = test_latency(sconv_prototxt_file, caffemodel_file, test_iters)
+        original_latency = test_latency(original_prototxt_file, caffemodel_file, test_iters)
         logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
 
     # prune and run the pruned caffemodel to get the accuracy, latency
     prune(caffemodel_file, original_prototxt_file, temp_caffemodel_file, pruning_percentage_dict)
+    # batch size for latency is 8, for accuracy is 50
+    # iteration number for latency is 3, for accuracy is 50
     latency = test_latency(sconv_prototxt_file, temp_caffemodel_file, test_iters)
     accuracy = test_accuracy(original_prototxt_file, temp_caffemodel_file)
 
@@ -117,7 +119,7 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_percenta
 if __name__ == '__main__':
     logging.basicConfig(filename='results/pruning_debug.log', filemode='w', level=logging.DEBUG)
     # no pruning, basically copy caffemodel
-    loss = alexnet_target_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
+    loss = alexnet_objective_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
 
     # loss = alexnet_target_function(conv1=0.5, conv2=0.5, conv3=0.5, conv4=0.5, conv5=0.5, fc6=0.5, fc7=0.5, fc8=0.5)
 

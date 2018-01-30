@@ -1,7 +1,7 @@
 import random
 import logging
 import time
-from calculate_objective import alexnet_target_function
+from objective_functions import alexnet_objective_function
 
 
 def random_search(n_iter):
@@ -12,7 +12,7 @@ def random_search(n_iter):
         start = time.time()
         # random pruning percentage in range [0, 1) for each layer in alexnet
         pruning_dict = {layer: random.random() for layer in alexnet_range}
-        alexnet_target_function(**pruning_dict)
+        alexnet_objective_function(**pruning_dict)
         print('Iteration {} takes: {:.2f}s'.format(i, time.time()-start))
 
 

@@ -3,7 +3,7 @@ import logging
 import time
 import itertools
 import sys
-from calculate_objective import alexnet_target_function
+from objective_functions import alexnet_objective_function
 
 
 def binary_search(n_iter):
@@ -12,7 +12,7 @@ def binary_search(n_iter):
                      'conv5': (0, 1), 'fc6': (0, 1), 'fc7': (0, 1), 'fc8': (0, 1)}
     logging.basicConfig(filename='results/binary_{}.log'.format(n_iter), filemode='w', level=logging.INFO)
 
-    target_function = alexnet_target_function
+    target_function = alexnet_objective_function
     target_function.latency_tradeoff = 50
     range_dict = alexnet_range
     candidate_counter = 0

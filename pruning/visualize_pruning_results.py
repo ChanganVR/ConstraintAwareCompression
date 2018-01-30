@@ -27,11 +27,11 @@ def plot_accuracy_latency(results, title=None, saturation=False):
     plt.xlabel('Accuracy')
     plt.ylabel('Latency(ms)')
     if not title:
-        plt.title('Accuracy vs Latency')
+        plt.title('Latency vs Accuracy')
     else:
         plt.title(title)
     plt.xlim([0, 0.6])
-    plt.ylim([500, 2300])
+    # plt.ylim([500, 2300])
     plt.show()
 
 
