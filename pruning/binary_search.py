@@ -1,7 +1,9 @@
+from __future__ import division
 import logging
 import time
-from calculate_objective import alexnet_target_function
 import itertools
+import sys
+from calculate_objective import alexnet_target_function
 
 
 def binary_search(n_iter):
@@ -19,7 +21,7 @@ def binary_search(n_iter):
     candidate_pruning_list = generate_candidates(range_dict, best_pruning_dict)
     for i in range(n_iter):
         start = time.time()
-        if candidate_counter == 256:
+        if candidate_counter >= 256:
             candidate_counter = 0
             candidate_pruning_list = generate_candidates(range_dict, best_pruning_dict)
 
@@ -29,7 +31,8 @@ def binary_search(n_iter):
         if objective > best_objective:
             best_pruning_dict = pruning_dict
         candidate_counter += 1
-        print('Iteration {} takes {:.2f}s'.format(i, time.time()-start))
+        sys.stdout.write('\r>>>Running iterations {}/{}, time: {:.2f}s'.format(i+1, n_iter, time.time()-start))
+        sys.stdout.flush()
 
 
 def generate_candidates(range_dict, best_pruning_dict):
@@ -39,9 +42,9 @@ def generate_candidates(range_dict, best_pruning_dict):
         for layer in best_pruning_dict:
             r = range_dict[layer]
             if best_pruning_dict[layer] == 3*r[0]/4 + r[1]/4:
-                range_dict[layer][1] = (r[0] + r[1]) / 2
+                range_dict[layer] = (r[0], (r[0] + r[1]) / 2)
             else:
-                range_dict[layer][0] = (r[0] + r[1]) / 2
+                range_dict[layer] = ((r[0] + r[1]) / 2, r[1])
 
     # generate next 256 candidate pruning_dict for searching
     candidate_pruning_list = []

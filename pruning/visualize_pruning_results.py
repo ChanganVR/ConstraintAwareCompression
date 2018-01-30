@@ -17,10 +17,13 @@ def find_max_objective(results):
     print(max_res)
 
 
-def plot_accuracy_latency_curve(results, title=None):
+def plot_accuracy_latency(results, title=None, saturation=False):
     latencies = [res.latency for res in results]
     accuracies = [res.accuracy for res in results]
-    plt.plot(accuracies, latencies, 'ro')
+    if not saturation:
+        plt.plot(accuracies, latencies, 'ro')
+    else:
+        plt.scatter(accuracies, latencies, c=list(range(len(latencies))), cmap='Reds')
     plt.xlabel('Accuracy')
     plt.ylabel('Latency(ms)')
     if not title:
@@ -44,7 +47,7 @@ def area_under_curve_diff(results, original_latency, accuracy_range=(0, 0.5), bi
     return last_area - current_area
 
 
-def area_under_curve(results, original_latency, accuracy_range=(0.2, 0.5), bin_width=0.01):
+def area_under_curve(results, original_latency, accuracy_range=(0, 0.55), bin_width=0.01):
     # accuracy_dict stores accuracy range as key and its corresponding latencies as value
     accuracy_dict = defaultdict(list)
     for result in results:
@@ -62,7 +65,7 @@ def area_under_curve(results, original_latency, accuracy_range=(0.2, 0.5), bin_w
     return area
 
 
-def range_distribution(results, accuracy_range=(0, 0.6), bin_width=0.1):
+def range_distribution(results, accuracy_range=(0, 0.55), bin_width=0.1):
     # number of points falling in each accuracy bin
     accuracy_dict = defaultdict(list)
     for result in results:
@@ -73,7 +76,7 @@ def range_distribution(results, accuracy_range=(0, 0.6), bin_width=0.1):
         print('Range [{}, {}]: {}'.format(bin_width*i, bin_width*(i+1), len(accuracy_dict[i])))
 
 
-def find_best_results(results, accuracy_range=(0, 0.6), bin_width=0.01):
+def find_best_results(results, accuracy_range=(0, 0.55), bin_width=0.01):
     # search for each accuracy bin with minimal latency
     accuracy_dict = defaultdict(list)
     for result in results:
@@ -88,7 +91,7 @@ def find_best_results(results, accuracy_range=(0, 0.6), bin_width=0.01):
 def plot_lower_bound_curve(results):
     bin_width = 0.01
     best_results = find_best_results(results, bin_width=bin_width)
-    plot_accuracy_latency_curve(best_results, title='Lower bound curve with search bin width {}'.format(bin_width))
+    plot_accuracy_latency(best_results, title='Lower bound curve with search bin width {}'.format(bin_width))
 
 
 def plot_latency_compression_curve(results):
@@ -108,6 +111,26 @@ def plot_latency_compression_curve(results):
     plt.show()
 
 
+def plot_uac_vs_iteration(results, original_latency, accuracy_range=(0, 0.55), bin_width=0.01, diff=True):
+    iterations = []
+    uacs = []
+    for i, result in enumerate(results):
+        iterations.append(i)
+        uacs.append(area_under_curve(results[:i+1], original_latency, accuracy_range, bin_width))
+    if diff:
+        temp = []
+        for i in range(len(uacs)-1):
+            temp.append(uacs[i] - uacs[i+1])
+        iterations = iterations[1:]
+        uacs = temp
+
+    plt.plot(iterations, uacs, 'b')
+    plt.xlabel('Iterations')
+    plt.ylabel('AUC')
+    plt.title('AUC vs iterations with bin width {}'.format(bin_width))
+    plt.show()
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('Log file needs to be specified')
@@ -120,9 +143,10 @@ if __name__ == '__main__':
     find_max_objective(res)
     print('Area under curve with range ({}, {}) is {}'.format(0.2, 0.5, area_under_curve(res, 2352, (0.2, 0.5))))
     range_distribution(res)
-    plot_accuracy_latency_curve(res)
+    plot_accuracy_latency(res, saturation=True)
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
+    # plot_uac_vs_iteration(res, 2352)
 
 # sample pruning log
 # INFO:root:=================================>>>Pruning starts<<<=================================

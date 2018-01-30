@@ -49,7 +49,7 @@ layer {
 #  }
   data_param {
     source: "examples/imagenet/ilsvrc12_val_lmdb"
-    batch_size: 264 # for 44c pcl-hsw3. batch size should be a multiple of 8 to use SPMDM mode in InnerProduct layers
+    batch_size: 8 # for 44c pcl-hsw3. batch size should be a multiple of 8 to use SPMDM mode in InnerProduct layers
     #batch_size: 256 # for pcl-knl03 (use 64 cores out of 68). batch size should be a multiple of 8 to use SPMDM mode in InnerProduct layers
     backend: LMDB
   }
