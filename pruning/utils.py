@@ -117,5 +117,5 @@ if __name__ == '__main__':
     # prototxt = sys.argv[2]
     # print(calculate_compression_rate(caffemodel, prototxt))
 
-    create_different_sparsity('results/pruning_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
+    create_different_sparsity('results/bo_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
 

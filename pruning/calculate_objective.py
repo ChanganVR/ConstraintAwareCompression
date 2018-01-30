@@ -4,7 +4,6 @@ import time
 import os
 import logging
 import json
-from visualize_pruning_results import read_log, area_under_curve_diff
 
 
 os.environ['OMP_NUM_THREADS'] = '4'
@@ -12,21 +11,14 @@ os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 
 original_latency = 0
 
-ITERATION_COUNTER = 0
-TOTAL_ITERATIONS = 1200
-
 
 def alexnet_target_function(**pruning_percentage_dict):
     start = time.time()
     # hyper importance factor alpha and beta
-    # TODO: how to approximate the final accuracy better
     # trade off 1 percent estimated accuracy(without training) for 50 ms final speedup (latency difference)
-    global ITERATION_COUNTER
-    global TOTAL_ITERATIONS
-    latency_tradeoff = 50 + (1-50) / TOTAL_ITERATIONS * ITERATION_COUNTER
-    ITERATION_COUNTER += 1
-    alpha = 1 / latency_tradeoff
-    beta = 0.2
+    if not hasattr(alexnet_target_function, 'latency_tradeoff'):
+        raise ValueError('Latency tradeoff factor for alexnet target function is not set')
+    alpha = 1 / alexnet_target_function.latency_tradeoff
     test_iters = 3
 
     # prune the network according to the parameters
@@ -34,8 +26,6 @@ def alexnet_target_function(**pruning_percentage_dict):
     sconv_prototxt_file = 'models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt'
     caffemodel_file = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
     temp_caffemodel_file = 'results/temp_alexnet.caffemodel'
-    # pruned_caffemodel_file = 'models/bvlc_reference_caffenet/logs/acc_57.5_0.001_5e-5_ft_0.001_5e-5/
-    # 0.001_5e-05_0_1_0_0_0_0_Sun_Jan__8_07-35-54_PST_2017/caffenet_train_iter_640000.caffemodel'
 
     # test original caffemodel latency with sconv
     global original_latency
@@ -52,10 +42,6 @@ def alexnet_target_function(**pruning_percentage_dict):
     logging.info('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))
     objective = accuracy * 100 + alpha * (original_latency - latency)
     logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
-
-    # using under curve area as optimization objective
-    # results = read_log('results/pruning_area_10_80_10_2.log)')
-    # objective = area_under_curve_diff(results, original_latency)
 
     return objective
 

@@ -7,6 +7,8 @@ def optimize(kappa_decay):
     # Lets find the maximum of a simple quadratic function of two variables
     # We create the bayes_opt object and pass the function to be maximized
     # together with the parameters names and their bounds.
+    target_function = alexnet_target_function
+    target_function.latency_tradeoff = 50
     bo = BayesianOptimization(alexnet_target_function,
                               {'conv1': (0, 1), 'conv2': (0, 1), 'conv3': (0, 1), 'conv4': (0, 1),
                                'conv5': (0, 1), 'fc6': (0, 1), 'fc7': (0, 1), 'fc8': (0, 1)})
@@ -39,11 +41,11 @@ def optimize(kappa_decay):
     kappa_lower = 2
     kappa_decay = True
     if not kappa_decay:
-        logging.basicConfig(filename='results/pruning__{}_{}_{}.log'.format(init_points, n_iter, kappa_upper),
+        logging.basicConfig(filename='results/bo__{}_{}_{}.log'.format(init_points, n_iter, kappa_upper),
                             filemode='w', level=logging.INFO)
         bo.maximize(init_points=10, n_iter=80, kappa=5)
     else:
-        logging.basicConfig(filename='results/pruning_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_upper, kappa_lower),
+        logging.basicConfig(filename='results/bo_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_upper, kappa_lower),
                             filemode='w', level=logging.INFO)
         bo.maximize(init_points=10, n_iter=0, kappa=5)
         for i in range(1, n_iter+1):

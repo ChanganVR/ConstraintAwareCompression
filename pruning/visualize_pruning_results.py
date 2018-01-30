@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import calculate_alexnet_compression_rate, read_log, Result
 
+
 def find_max_objective(results):
     max_res = results[0]
     max_iter = 1
@@ -119,9 +120,9 @@ if __name__ == '__main__':
     find_max_objective(res)
     print('Area under curve with range ({}, {}) is {}'.format(0.2, 0.5, area_under_curve(res, 2352, (0.2, 0.5))))
     range_distribution(res)
-    # plot_accuracy_latency_curve(res)
+    plot_accuracy_latency_curve(res)
     # plot_latency_compression_curve(res)
-    plot_lower_bound_curve(res)
+    # plot_lower_bound_curve(res)
 
 # sample pruning log
 # INFO:root:=================================>>>Pruning starts<<<=================================
