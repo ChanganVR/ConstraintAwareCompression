@@ -8,8 +8,10 @@ import json
 
 os.environ['OMP_NUM_THREADS'] = '4'
 os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
-
-original_latency = 0
+# for inference: batch size: 32, # of threads: 4
+# running original conv with pretrained caffemodel
+# the sparse conv is 78.16, original conv is 238.98
+original_latency = 78.16
 
 
 def alexnet_objective_function(**pruning_percentage_dict):
@@ -25,16 +27,19 @@ def alexnet_objective_function(**pruning_percentage_dict):
     original_prototxt_file = 'models/bvlc_reference_caffenet/train_val.prototxt'
     sconv_prototxt_file = 'models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt'
     caffemodel_file = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+    prepruned_caffemodel_file = 'models/bvlc_reference_caffenet/logs/acc_57.5_0.001_5e-5_ft_0.001_5e-5/' \
+                                '0.001_5e-05_0_1_0_0_0_0_Sun_Jan__8_07-35-54_PST_2017/' \
+                                'caffenet_train_iter_640000.caffemodel'
     temp_caffemodel_file = 'results/temp_alexnet.caffemodel'
 
     # test original caffemodel latency with sconv
     global original_latency
-    if original_latency == 0:
-        original_latency = test_latency(original_prototxt_file, caffemodel_file, test_iters)
+    if not hasattr(alexnet_objective_function, 'original_logged'):
         logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
+        alexnet_objective_function.__setattr__('original_logged', True)
 
     # prune and run the pruned caffemodel to get the accuracy, latency
-    prune(caffemodel_file, original_prototxt_file, temp_caffemodel_file, pruning_percentage_dict)
+    prune(prepruned_caffemodel_file, original_prototxt_file, temp_caffemodel_file, pruning_percentage_dict)
     # batch size for latency is 8, for accuracy is 50
     # iteration number for latency is 3, for accuracy is 50
     latency = test_latency(sconv_prototxt_file, temp_caffemodel_file, test_iters)
@@ -119,9 +124,14 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_percenta
 if __name__ == '__main__':
     logging.basicConfig(filename='results/pruning_debug.log', filemode='w', level=logging.DEBUG)
     # no pruning, basically copy caffemodel
-    loss = alexnet_objective_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
+    # loss = alexnet_objective_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
 
-    # loss = alexnet_target_function(conv1=0.5, conv2=0.5, conv3=0.5, conv4=0.5, conv5=0.5, fc6=0.5, fc7=0.5, fc8=0.5)
+    alexnet_objective_function.latency_tradeoff = 50
+    loss = alexnet_objective_function(conv1=0.999, conv2=0.999, conv3=0.999, conv4=0.999, conv5=0.999,
+                                      fc6=0.999, fc7=0.999, fc8=0.999)
+    # run pruned model
+    # export OMP_NUM_THREADS=4
+    # build/tools/caffe.bin test -model models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt -weights
 
     # skimcaffe params
     # loss = alexnet_target_function(conv1=0, conv2=0.85, conv3=0.93, conv4=0.91, conv5=0.88,

@@ -8,7 +8,7 @@ import json
 
 class Result(object):
     def __init__(self, pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                 accuracy, total_time, objective_value):
+                 accuracy, total_time, objective_value, speedup):
         self.pruning_dict = pruning_dict
         self.pruning_time = pruning_time
         self.testing_latency_time = testing_latency_time
@@ -17,6 +17,8 @@ class Result(object):
         self.accuracy = accuracy
         self.total_time = total_time
         self.objective_value = objective_value
+        # sparse / original conv
+        self.latency_ratio = speedup
 
     def __str__(self):
         string = 'conv1\tconv2\tconv3\tconv4\tconv5\tfc6\tfc7\tfc8' + '\n'
@@ -24,7 +26,8 @@ class Result(object):
         string += '\t'.join(['%.2f' % float(x) for x in pruning_percentages.split()]) + '\n'
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
-        string += "{:<20} {:.2f}".format('Objective:', self.objective_value)
+        string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
+        string += "{:<20} {:.2f}".format('Latency ratio', self.latency_ratio)
         return string
 
     @staticmethod
@@ -34,6 +37,7 @@ class Result(object):
 
 def read_log(log_file):
     results = []
+    original_latency = 0
     with open(log_file) as fo:
         lines = fo.readlines()
     if len(lines) == 0:
@@ -42,6 +46,8 @@ def read_log(log_file):
         # need to have a full pruning result
         if i + 9 >= len(lines):
             break
+        if 'Original latency' in line:
+            original_latency = float(line.strip().split()[-1])
         if 'Pruning starts' in line:
             layers = [x for x in lines[i+1][10:].strip().split()]
             pruning_percentages = [float(x) for x in lines[i+2][10:].strip().split()]
@@ -53,8 +59,8 @@ def read_log(log_file):
             accuracy = float(lines[i+7].strip().split()[-1])
             total_time = float(lines[i+8].strip().split()[-1])
             objective_value = float(lines[i+9].strip().split()[-1])
-            result = Result(pruning_dict, pruning_time, testing_latency_time, latency,
-                            testing_accuracy_time, accuracy, total_time, objective_value)
+            result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
+                            accuracy, total_time, objective_value, latency / original_latency)
             results.append(result)
 
     return results

@@ -10,7 +10,7 @@ def find_max_objective(results):
     max_res = results[0]
     max_iter = 1
     for iter, res in enumerate(results):
-        if res.objective_value > max_res.objective_value:
+        if res.latency_ratio < max_res.latency_ratio:
             max_res = res
             max_iter = iter
     print('Find max objective value in iteration', max_iter)
@@ -28,6 +28,24 @@ def plot_accuracy_latency(results, title=None, saturation=False):
     plt.ylabel('Latency(ms)')
     if not title:
         plt.title('Latency vs Accuracy')
+    else:
+        plt.title(title)
+    plt.xlim([0, 0.6])
+    # plt.ylim([500, 2300])
+    plt.show()
+
+
+def plot_accuracy_latency_ratio(results, title=None, saturation=False):
+    ratios = [res.latency_ratio for res in results]
+    accuracies = [res.accuracy for res in results]
+    if not saturation:
+        plt.plot(accuracies, ratios, 'ro')
+    else:
+        plt.scatter(accuracies, ratios, c=list(range(len(ratios))), cmap='Reds')
+    plt.xlabel('Accuracy')
+    plt.ylabel('Latency ratio(%)')
+    if not title:
+        plt.title('Latency ratio vs Accuracy')
     else:
         plt.title(title)
     plt.xlim([0, 0.6])
@@ -143,10 +161,11 @@ if __name__ == '__main__':
     find_max_objective(res)
     print('Area under curve with range ({}, {}) is {}'.format(0.2, 0.5, area_under_curve(res, 2352, (0.2, 0.5))))
     range_distribution(res)
-    plot_accuracy_latency(res, saturation=True)
+    # plot_accuracy_latency(res, saturation=True)
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
     # plot_uac_vs_iteration(res, 2352)
+    plot_accuracy_latency_ratio(res, saturation=True)
 
 # sample pruning log
 # INFO:root:=================================>>>Pruning starts<<<=================================

@@ -5,14 +5,15 @@ from objective_functions import alexnet_objective_function
 
 def bayesian_optimization(init_points, n_iter, tradeoff_factors, kappa_decay=True, kappa_range=(2, 10)):
     if len(tradeoff_factors) > 1:
-        filename = 'results/mbo_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_range[1], kappa_range[0])
+        filename = 'results/pre_mbo_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_range[1], kappa_range[0])
     else:
         filename = 'results/bo_{}_{}_{}_{}.log'.format(init_points, n_iter, kappa_range[1], kappa_range[0])
     logging.basicConfig(filename=filename, filemode='w', level=logging.INFO)
 
     local_n_iter = int(n_iter / len(tradeoff_factors))
     for tradeoff_factor in tradeoff_factors:
-        print('Switch to tradeoff factor {}...'.format(traoff_factor))
+        print('Switch to tradeoff factor {}...'.format(tradeoff_factor))
+        logging.info('Switch to tradeoff factor {}...'.format(tradeoff_factor))
         objective_function = alexnet_objective_function
         objective_function.latency_tradeoff = tradeoff_factor
         bo = BayesianOptimization(objective_function,
