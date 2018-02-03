@@ -38,10 +38,11 @@ def plot_accuracy_latency(results, title=None, saturation=False):
 def plot_accuracy_latency_ratio(results, title=None, saturation=False):
     ratios = [res.latency_ratio for res in results]
     accuracies = [res.accuracy for res in results]
+    saturations = [res.sampling_time for res in results]
     if not saturation:
         plt.plot(accuracies, ratios, 'ro')
     else:
-        plt.scatter(accuracies, ratios, c=list(range(len(ratios))), cmap='Reds')
+        plt.scatter(accuracies, ratios, c=saturations, cmap='Reds')
     plt.xlabel('Accuracy')
     plt.ylabel('Latency ratio(%)')
     if not title:
@@ -65,7 +66,7 @@ def area_under_curve_diff(results, original_latency, accuracy_range=(0, 0.5), bi
     return last_area - current_area
 
 
-def area_under_curve(results, original_latency, accuracy_range=(0, 0.55), bin_width=0.01):
+def area_under_curve(results, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, ratio=True):
     # accuracy_dict stores accuracy range as key and its corresponding latencies as value
     accuracy_dict = defaultdict(list)
     for result in results:
@@ -77,9 +78,12 @@ def area_under_curve(results, original_latency, accuracy_range=(0, 0.55), bin_wi
     for i in range(int((accuracy_range[1]-accuracy_range[0])/bin_width)):
         # even the bin doesn't have any points
         if i not in accuracy_dict:
-            area += bin_width * original_latency
+            area += bin_width * upper_bound
         else:
-            area += bin_width * min(accuracy_dict[i], key=Result.get_latency).latency
+            if ratio:
+                area += bin_width * min(accuracy_dict[i], key=Result.get_ratio).latency_ratio
+            else:
+                area += bin_width * min(accuracy_dict[i], key=Result.get_latency).latency
     return area
 
 
@@ -129,12 +133,12 @@ def plot_latency_compression_curve(results):
     plt.show()
 
 
-def plot_uac_vs_iteration(results, original_latency, accuracy_range=(0, 0.55), bin_width=0.01, diff=True):
+def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False):
     iterations = []
     uacs = []
     for i, result in enumerate(results):
         iterations.append(i)
-        uacs.append(area_under_curve(results[:i+1], original_latency, accuracy_range, bin_width))
+        uacs.append(area_under_curve(results[:i+1], upper_bound, accuracy_range, bin_width))
     if diff:
         temp = []
         for i in range(len(uacs)-1):
@@ -159,12 +163,12 @@ if __name__ == '__main__':
             res += read_log(sys.argv[1])
     print('Number of iterations:', len(res))
     find_max_objective(res)
-    print('Area under curve with range ({}, {}) is {}'.format(0.2, 0.5, area_under_curve(res, 2352, (0.2, 0.5))))
+    print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(res, 1, (0, 0.55))))
     range_distribution(res)
     # plot_accuracy_latency(res, saturation=True)
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
-    # plot_uac_vs_iteration(res, 2352)
+    # plot_uac_vs_iteration(res, 1)
     plot_accuracy_latency_ratio(res, saturation=True)
 
 # sample pruning log

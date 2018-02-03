@@ -8,7 +8,7 @@ import json
 
 class Result(object):
     def __init__(self, pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                 accuracy, total_time, objective_value, speedup):
+                 accuracy, total_time, objective_value, speedup, time):
         self.pruning_dict = pruning_dict
         self.pruning_time = pruning_time
         self.testing_latency_time = testing_latency_time
@@ -19,6 +19,7 @@ class Result(object):
         self.objective_value = objective_value
         # sparse / original conv
         self.latency_ratio = speedup
+        self.sampling_time = time
 
     def __str__(self):
         string = 'conv1\tconv2\tconv3\tconv4\tconv5\tfc6\tfc7\tfc8' + '\n'
@@ -27,12 +28,17 @@ class Result(object):
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
         string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
-        string += "{:<20} {:.2f}".format('Latency ratio', self.latency_ratio)
+        string += "{:<20} {:.2f}".format('Latency ratio', self.latency_ratio) + '\n'
+        string += "{:<20} {:.2f}".format('Sampling time', self.sampling_time)
         return string
 
     @staticmethod
     def get_latency(result):
         return result.latency
+
+    @staticmethod
+    def get_ratio(result):
+        return result.latency_ratio
 
 
 def read_log(log_file):
@@ -42,10 +48,13 @@ def read_log(log_file):
         lines = fo.readlines()
     if len(lines) == 0:
         raise IOError('Can not read log file')
+    sampling_counter =0
     for i, line in enumerate(lines):
         # need to have a full pruning result
         if i + 9 >= len(lines):
             break
+        if 'Switch to tradeoff factor' in line:
+            sampling_counter = 0
         if 'Original latency' in line:
             original_latency = float(line.strip().split()[-1])
         if 'Pruning starts' in line:
@@ -60,7 +69,8 @@ def read_log(log_file):
             total_time = float(lines[i+8].strip().split()[-1])
             objective_value = float(lines[i+9].strip().split()[-1])
             result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                            accuracy, total_time, objective_value, latency / original_latency)
+                            accuracy, total_time, objective_value, latency / original_latency, sampling_counter)
+            sampling_counter += 1
             results.append(result)
 
     return results
