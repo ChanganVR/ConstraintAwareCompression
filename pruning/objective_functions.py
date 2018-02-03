@@ -8,19 +8,23 @@ import json
 
 os.environ['OMP_NUM_THREADS'] = '4'
 os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
-# for inference: batch size: 32, # of threads: 4
-# running original conv with pretrained caffemodel
-# the sparse conv is 78.16, original conv is 238.98
-original_latency = 78.16
 
 
 def alexnet_objective_function(**pruning_percentage_dict):
     start = time.time()
-    # hyper importance factor alpha and beta
-    # trade off 1 percent estimated accuracy(without training) for 50 ms final speedup (latency difference)
+    # set some hyper parameters
     if not hasattr(alexnet_objective_function, 'latency_tradeoff'):
-        raise ValueError('Latency tradeoff factor for alexnet target function is not set')
-    alpha = 1 / alexnet_objective_function.latency_tradeoff
+        raise ValueError('Latency tradeoff factor is not set')
+    latency_tradeoff = alexnet_objective_function.latency_tradeoff
+    if not hasattr(alexnet_objective_function, 'original_latency'):
+        raise ValueError('Original latency is not set')
+    original_latency = alexnet_objective_function.original_latency
+    if not hasattr(alexnet_objective_function, 'original_logged'):
+        logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
+        alexnet_objective_function.__setattr__('original_logged', True)
+    if not hasattr(alexnet_objective_function, 'input_caffemodel'):
+        raise ValueError('Input caffemodel is not set')
+    input_caffemodel = alexnet_objective_function.input_caffemodel
     test_iters = 3
 
     # prune the network according to the parameters
@@ -32,14 +36,8 @@ def alexnet_objective_function(**pruning_percentage_dict):
                                 'caffenet_train_iter_640000.caffemodel'
     temp_caffemodel_file = 'results/temp_alexnet.caffemodel'
 
-    # test original caffemodel latency with sconv
-    global original_latency
-    if not hasattr(alexnet_objective_function, 'original_logged'):
-        logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
-        alexnet_objective_function.__setattr__('original_logged', True)
-
     # prune and run the pruned caffemodel to get the accuracy, latency
-    prune(prepruned_caffemodel_file, original_prototxt_file, temp_caffemodel_file, pruning_percentage_dict)
+    prune(input_caffemodel, original_prototxt_file, temp_caffemodel_file, pruning_percentage_dict)
     # batch size for latency is 8, for accuracy is 50
     # iteration number for latency is 3, for accuracy is 50
     latency = test_latency(sconv_prototxt_file, temp_caffemodel_file, test_iters)
@@ -47,7 +45,7 @@ def alexnet_objective_function(**pruning_percentage_dict):
 
     # objective is function of accuracy and latency
     logging.info('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))
-    objective = accuracy * 100 + alpha * (original_latency - latency)
+    objective = accuracy * 100 + latency_tradeoff * (original_latency - latency)
     logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
 
     return objective
