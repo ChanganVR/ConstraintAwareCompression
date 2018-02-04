@@ -41,19 +41,64 @@ class Result(object):
         return result.latency_ratio
 
 
-def read_log(log_file):
+def read_fp_log(log_file, bo_num=None):
+    # read log file for fine-pruning procedure
     results = []
     original_latency = 0
     with open(log_file) as fo:
         lines = fo.readlines()
     if len(lines) == 0:
         raise IOError('Can not read log file')
-    sampling_counter =0
+
+    # find out logs belonging to {bo_num}th bayesian optimization
+    if bo_num is not None:
+        start_pattern = 'Start {}th fine-pruning iteration'.format(bo_num)
+        end_pattern = 'Start {}th fine-pruning iteration'.format(bo_num+1)
+        boundaries = [i for i, line in enumerate(lines) if start_pattern in line or end_pattern in line]
+        if len(boundaries) == 1:
+            lines = lines[boundaries[0]:]
+        elif len(boundaries) == 2:
+            lines = lines[boundaries[0]: boundaries[1]]
+        else:
+            raise RuntimeError('Fail to read log')
+
+    sampling_counter = 0
     for i, line in enumerate(lines):
         # need to have a full pruning result
         if i + 9 >= len(lines):
             break
-        if 'Switch to tradeoff factor' in line:
+        if 'Pruning starts' in line:
+            layers = [x for x in lines[i+1][10:].strip().split()]
+            pruning_percentages = [float(x) for x in lines[i+2][10:].strip().split()]
+            pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
+            pruning_time = float(lines[i+3].strip().split()[-1])
+            testing_latency_time = float(lines[i+4].strip().split()[-1])
+            latency = float(lines[i+5].strip().split()[-1])
+            testing_accuracy_time = float(lines[i+6].strip().split()[-1])
+            accuracy = float(lines[i+7].strip().split()[-1])
+            total_time = float(lines[i+8].strip().split()[-1])
+            objective_value = float(lines[i+9].strip().split()[-1])
+            result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
+                            accuracy, total_time, objective_value, None, sampling_counter)
+            sampling_counter += 1
+            results.append(result)
+
+
+def read_log(log_file):
+    # read single bayesian optimization log file
+    results = []
+    original_latency = 0
+    with open(log_file) as fo:
+        lines = fo.readlines()
+    if len(lines) == 0:
+        raise IOError('Can not read log file')
+
+    sampling_counter = 0
+    for i, line in enumerate(lines):
+        # need to have a full pruning result
+        if i + 9 >= len(lines):
+            break
+        if 'Bayesian optimization tradeoff factor' in line:
             sampling_counter = 0
         if 'Original latency' in line:
             original_latency = float(line.strip().split()[-1])

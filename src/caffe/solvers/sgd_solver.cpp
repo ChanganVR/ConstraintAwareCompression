@@ -239,32 +239,32 @@ void SGDSolver<Dtype>::ApplyUpdate() {
 	for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
 		//Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
     if (this->net_->learnable_params()[param_id]->num_axes() >= 2) {
-		  sparsity_msg_stream << GetSparsity(param_id) <<"\t";
+		  sparsity_msg_stream << std::setprecision(2) << GetSparsity(param_id) <<"\t";
     }
 		//if(local_decay) sparsity_msg_stream << GetSparsity(param_id) <<"\t";
 		//else sparsity_msg_stream << -1 <<"\t";
 	}
 	LOG(INFO) << sparsity_msg_stream.str();
 
-	sparsity_msg_stream.str("");
-	sparsity_msg_stream << "     Winograd Sparsity %: \n";
-	for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() >= 2) {
-		  sparsity_msg_stream << GetWinogradSparsity(param_id) <<"\t";
-    }
-	}
-	LOG(INFO) << sparsity_msg_stream.str();
-
-	sparsity_msg_stream.str("");
-	sparsity_msg_stream << "     Winograd Old Sparsity %: \n";
-	for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() >= 2) {
-		  sparsity_msg_stream << GetWinogradSparsityOld(param_id) <<"\t";
-    }
-	}
-	LOG(INFO) << sparsity_msg_stream.str();
-
-  PrintWinogradFiberSliceSparsity();
+//	sparsity_msg_stream.str("");
+//	sparsity_msg_stream << "     Winograd Sparsity %: \n";
+//	for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() >= 2) {
+//		  sparsity_msg_stream << GetWinogradSparsity(param_id) <<"\t";
+//    }
+//	}
+//	LOG(INFO) << sparsity_msg_stream.str();
+//
+//	sparsity_msg_stream.str("");
+//	sparsity_msg_stream << "     Winograd Old Sparsity %: \n";
+//	for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() >= 2) {
+//		  sparsity_msg_stream << GetWinogradSparsityOld(param_id) <<"\t";
+//    }
+//	}
+//	LOG(INFO) << sparsity_msg_stream.str();
+//
+//  PrintWinogradFiberSliceSparsity();
 
 #if 0
 	sparsity_msg_stream.str("");
@@ -307,60 +307,60 @@ void SGDSolver<Dtype>::ApplyUpdate() {
 	LOG(INFO) << sparsity_msg_stream.str();
 #endif
 
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        OC-fiber Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetFiberSparsity(param_id, 0) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        IC-fiber Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetFiberSparsity(param_id, 1) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        kernel-fiber Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetFiberSparsity(param_id, 2) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        OC-slice Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetSliceSparsity(param_id, 0) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        IC-slice Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetSliceSparsity(param_id, 1) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-
-  sparsity_msg_stream.str("");
-  sparsity_msg_stream << "        kernel-slice Sparsity %: \n";
-  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
-    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
-      sparsity_msg_stream << GetSliceSparsity(param_id, 2) <<"\t";
-    }
-  }
-  LOG(INFO) << sparsity_msg_stream.str();
-  }
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        OC-fiber Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetFiberSparsity(param_id, 0) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        IC-fiber Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetFiberSparsity(param_id, 1) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        kernel-fiber Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetFiberSparsity(param_id, 2) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        OC-slice Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetSliceSparsity(param_id, 0) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        IC-slice Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetSliceSparsity(param_id, 1) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//
+//  sparsity_msg_stream.str("");
+//  sparsity_msg_stream << "        kernel-slice Sparsity %: \n";
+//  for (int param_id = 0; param_id < this->net_->learnable_params().size(); ++param_id) {
+//    if (this->net_->learnable_params()[param_id]->num_axes() == 4) {
+//      sparsity_msg_stream << GetSliceSparsity(param_id, 2) <<"\t";
+//    }
+//  }
+//  LOG(INFO) << sparsity_msg_stream.str();
+//  }
 
   ClipGradients();
   Solver<Dtype>::total_regularization_term_ = Dtype(0);
