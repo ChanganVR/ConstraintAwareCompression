@@ -10,9 +10,9 @@ from utils import read_log
 from visualize_pruning_results import find_best_results
 
 
-def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_percentage_dict):
+def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):
     # read caffemodel weights
-    net = caffe.Net(prototxt_file, caffemodel_file, caffe.TEST)
+    net = caffe.Net(prototxt_file, input_caffemodel, caffe.TEST)
     for layer in net.params:
         pruning_percentage = pruning_percentage_dict[layer]
 
@@ -26,7 +26,7 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_percenta
         biases[np.abs(biases) < threshold] = 0
 
     # finish pruning and write weights to temporary caffemodel
-    net.save(temp_caffemodel_file)
+    net.save(output_caffemodel)
 
 
 def generate_best_models(dest_dir, log_file, caffemodel, prototxt):

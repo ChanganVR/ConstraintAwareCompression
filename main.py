@@ -15,11 +15,10 @@ batch_size = 32
 original_latency = 238
 latency_constraint = 80
 fine_pruning_iterations = 5
-bo_iters = 10
-accuracy_lower_bound = 0.55
+bo_iters = 300
 cooling_function = 'linear'
-min_acc = 0.55
-max_iter = 100
+min_acc = 0.53
+max_iter = 20000
 # allow 4 percent drop in accuracy to trade off for 140 ms speedup
 # TODO: latency tradeoff factor should also be a function of time
 latency_tradeoff = 4/140
@@ -84,6 +83,8 @@ for t in range(fine_pruning_iterations):
     command = ['python', 'pruning/prune.py', input_caffemodel, original_prototxt,
                best_sampled_caffemodel, pruning_dict_file]
     os.system(' '.join(command))
+    if not os.path.exists(best_sampled_caffemodel):
+        logging.error('Cannot find the best sampled model')
     logging.info('Pruning takes {:.2f}s'.format(time.time()-start))
 
     # avoid affecting latency measurement, run fine-tuning and pruning from command line
@@ -91,10 +92,12 @@ for t in range(fine_pruning_iterations):
     # TODO: should min_acc, max_iter be a function of time?
     start = time.time()
     last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
-    finetuning_logfile = os.path.join(output_folder, last_finetuned_caffemodel.replace('caffemodel', 'log'))
+    finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')
     command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, solver_file,
                last_finetuned_caffemodel, str(min_acc), str(max_iter), finetuning_logfile]
     os.system(' '.join(command))
+    if not os.path.exists(last_finetuned_caffemodel):
+        logging.error('Cannot find the finetuned caffemodel')
     logging.info('Fine-tuning takes {:.2f}s'.format(time.time()-start))
 
 print('Final result', max_acc)

@@ -44,11 +44,13 @@ class Result(object):
 def read_fp_log(log_file, bo_num=None):
     # read log file for fine-pruning procedure
     results = []
-    original_latency = 0
     with open(log_file) as fo:
-        lines = fo.readlines()
+        lines = [line.strip() for line in fo.readlines()]
     if len(lines) == 0:
         raise IOError('Can not read log file')
+
+    # read original latency from the beginning of the file
+    original_latency = float(lines[2].split()[-1])
 
     # find out logs belonging to {bo_num}th bayesian optimization
     if bo_num is not None:
@@ -68,20 +70,22 @@ def read_fp_log(log_file, bo_num=None):
         if i + 9 >= len(lines):
             break
         if 'Pruning starts' in line:
-            layers = [x for x in lines[i+1][10:].strip().split()]
-            pruning_percentages = [float(x) for x in lines[i+2][10:].strip().split()]
+            layers = [x for x in lines[i+1][10:].split()]
+            pruning_percentages = [float(x) for x in lines[i+2][10:].split()]
             pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
-            pruning_time = float(lines[i+3].strip().split()[-1])
-            testing_latency_time = float(lines[i+4].strip().split()[-1])
-            latency = float(lines[i+5].strip().split()[-1])
-            testing_accuracy_time = float(lines[i+6].strip().split()[-1])
-            accuracy = float(lines[i+7].strip().split()[-1])
-            total_time = float(lines[i+8].strip().split()[-1])
-            objective_value = float(lines[i+9].strip().split()[-1])
+            pruning_time = float(lines[i+3].split()[-1])
+            testing_latency_time = float(lines[i+4].split()[-1])
+            latency = float(lines[i+5].split()[-1])
+            testing_accuracy_time = float(lines[i+6].split()[-1])
+            accuracy = float(lines[i+7].split()[-1])
+            total_time = float(lines[i+8].split()[-1])
+            objective_value = float(lines[i+9].split()[-1])
             result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                            accuracy, total_time, objective_value, None, sampling_counter)
+                            accuracy, total_time, objective_value, latency / original_latency, sampling_counter)
             sampling_counter += 1
             results.append(result)
+
+    return results
 
 
 def read_log(log_file):
@@ -89,7 +93,7 @@ def read_log(log_file):
     results = []
     original_latency = 0
     with open(log_file) as fo:
-        lines = fo.readlines()
+        lines = [line.strip() for line in fo.readlines()]
     if len(lines) == 0:
         raise IOError('Can not read log file')
 
@@ -101,18 +105,18 @@ def read_log(log_file):
         if 'Bayesian optimization tradeoff factor' in line:
             sampling_counter = 0
         if 'Original latency' in line:
-            original_latency = float(line.strip().split()[-1])
+            original_latency = float(line.split()[-1])
         if 'Pruning starts' in line:
-            layers = [x for x in lines[i+1][10:].strip().split()]
-            pruning_percentages = [float(x) for x in lines[i+2][10:].strip().split()]
+            layers = [x for x in lines[i+1][10:].split()]
+            pruning_percentages = [float(x) for x in lines[i+2][10:].split()]
             pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
-            pruning_time = float(lines[i+3].strip().split()[-1])
-            testing_latency_time = float(lines[i+4].strip().split()[-1])
-            latency = float(lines[i+5].strip().split()[-1])
-            testing_accuracy_time = float(lines[i+6].strip().split()[-1])
-            accuracy = float(lines[i+7].strip().split()[-1])
-            total_time = float(lines[i+8].strip().split()[-1])
-            objective_value = float(lines[i+9].strip().split()[-1])
+            pruning_time = float(lines[i+3].split()[-1])
+            testing_latency_time = float(lines[i+4].split()[-1])
+            latency = float(lines[i+5].split()[-1])
+            testing_accuracy_time = float(lines[i+6].split()[-1])
+            accuracy = float(lines[i+7].split()[-1])
+            total_time = float(lines[i+8].split()[-1])
+            objective_value = float(lines[i+9].split()[-1])
             result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
                             accuracy, total_time, objective_value, latency / original_latency, sampling_counter)
             sampling_counter += 1
@@ -178,5 +182,6 @@ if __name__ == '__main__':
     # prototxt = sys.argv[2]
     # print(calculate_compression_rate(caffemodel, prototxt))
 
-    create_different_sparsity('results/bo_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
-
+    # create_different_sparsity('results/bo_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
+    results = read_fp_log('results/fp_5_10_linear/fine_pruning.log', bo_num=0)
+    print(results[0])
