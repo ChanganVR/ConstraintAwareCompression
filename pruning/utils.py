@@ -50,7 +50,7 @@ def read_fp_log(log_file, bo_num=None):
         raise IOError('Can not read log file')
 
     # read original latency from the beginning of the file
-    original_latency = float(lines[2].split()[-1])
+    original_latency = [float(line.split()[-1]) for line in lines[:10] if 'Original latency' in line][0]
 
     # find out logs belonging to {bo_num}th bayesian optimization
     if bo_num is not None:
@@ -86,6 +86,27 @@ def read_fp_log(log_file, bo_num=None):
             results.append(result)
 
     return results
+
+
+def find_next_phase(log_file):
+    with open(log_file) as fo:
+        lines = [line.strip() for line in fo.readlines()]
+    if len(lines) == 0:
+        raise IOError('Can not read log file')
+    t = int(lines[-1][lines[-1].find('th')-1])
+    if t == -1:
+        raise ValueError('Log file format incorrect')
+    if 'Bayesian optimization' in lines[-1]:
+        next_phase = 'pruning'
+    elif 'Pruning the best sampled model' in lines[-1]:
+        next_phase = 'finetuning'
+    elif 'Fine-tuning' in lines[-1]:
+        next_phase = 'bayesian optimization'
+        t += 1
+    else:
+        raise ValueError('Log file format incorrect')
+
+    return t, next_phase
 
 
 def read_log(log_file):
@@ -183,5 +204,5 @@ if __name__ == '__main__':
     # print(calculate_compression_rate(caffemodel, prototxt))
 
     # create_different_sparsity('results/bo_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
-    results = read_fp_log('results/fp_5_10_linear/fine_pruning.log', bo_num=0)
+    results = read_fp_log('results/fp_5_300_linear/fine_pruning.log', bo_num=0)
     print(results[0])

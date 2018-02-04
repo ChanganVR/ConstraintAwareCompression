@@ -6,10 +6,6 @@ import logging
 import json
 
 
-os.environ['OMP_NUM_THREADS'] = '4'
-os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
-
-
 def alexnet_objective_function(**pruning_percentage_dict):
     start = time.time()
     # set some hyper parameters
@@ -30,10 +26,6 @@ def alexnet_objective_function(**pruning_percentage_dict):
     # prune the network according to the parameters
     original_prototxt_file = 'models/bvlc_reference_caffenet/train_val.prototxt'
     sconv_prototxt_file = 'models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt'
-    caffemodel_file = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-    prepruned_caffemodel_file = 'models/bvlc_reference_caffenet/logs/acc_57.5_0.001_5e-5_ft_0.001_5e-5/' \
-                                '0.001_5e-05_0_1_0_0_0_0_Sun_Jan__8_07-35-54_PST_2017/' \
-                                'caffenet_train_iter_640000.caffemodel'
     temp_caffemodel_file = 'results/temp_alexnet.caffemodel'
 
     # prune and run the pruned caffemodel to get the accuracy, latency
