@@ -17,7 +17,7 @@ def find_max_objective(results):
     print(max_res)
 
 
-def plot_accuracy_latency(results, title=None, saturation=False):
+def plot_accuracy_latency(results, title=None, saturation=False, accuracy_range=None):
     latencies = [res.latency for res in results]
     accuracies = [res.accuracy for res in results]
     if not saturation:
@@ -30,7 +30,8 @@ def plot_accuracy_latency(results, title=None, saturation=False):
         plt.title('Latency vs Accuracy')
     else:
         plt.title(title)
-    plt.xlim([0, 0.6])
+    if accuracy_range is not None:
+        plt.xlim(accuracy_range)
     # plt.ylim([500, 2300])
     plt.show()
 
@@ -165,11 +166,11 @@ if __name__ == '__main__':
     find_max_objective(res)
     print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(res, 1, (0, 0.55))))
     range_distribution(res)
-    # plot_accuracy_latency(res, saturation=True)
+    plot_accuracy_latency(res, saturation=True, accuracy_range=(0.5, 0.57))
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
     # plot_uac_vs_iteration(res, 1)
-    plot_accuracy_latency_ratio(res, saturation=True)
+    # plot_accuracy_latency_ratio(res, saturation=True)
 
 # sample pruning log
 # INFO:root:=================================>>>Pruning starts<<<=================================

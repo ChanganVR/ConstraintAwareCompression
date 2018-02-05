@@ -28,8 +28,8 @@ class Result(object):
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
         string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
-        string += "{:<20} {:.2f}".format('Latency ratio', self.latency_ratio) + '\n'
-        string += "{:<20} {:.2f}".format('Sampling time', self.sampling_time)
+        string += "{:<20} {:.2f}".format('Latency ratio:', self.latency_ratio) + '\n'
+        string += "{:<20} {:.2f}".format('Sampling time:', self.sampling_time)
         return string
 
     @staticmethod
@@ -93,7 +93,7 @@ def find_next_phase(log_file):
         lines = [line.strip() for line in fo.readlines()]
     if len(lines) == 0:
         raise IOError('Can not read log file')
-    t = int(lines[-1][lines[-1].find('th')-1])
+    t = int(lines[-1][lines[-1].find('th iteration')-1])
     if t == -1:
         raise ValueError('Log file format incorrect')
     if 'Bayesian optimization' in lines[-1]:
@@ -204,5 +204,7 @@ if __name__ == '__main__':
     # print(calculate_compression_rate(caffemodel, prototxt))
 
     # create_different_sparsity('results/bo_10_1200_10_1.log', [0.2, 0.4, 0.6, 0.8])
-    results = read_fp_log('results/fp_5_300_linear/fine_pruning.log', bo_num=0)
-    print(results[0])
+    # results = read_fp_log('results/fp_5_40_linear/fine_pruning.log', bo_num=0)
+    # print(results[0])
+
+    find_next_phase('results/fp_5_40_linear/fine_pruning.log')

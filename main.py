@@ -22,7 +22,7 @@ batch_size = 32
 original_latency = 238
 latency_constraint = 80
 fine_pruning_iterations = 5
-bo_iters = 300
+bo_iters = 40
 cooling_function = 'linear'
 min_acc = 0.53
 max_iter = 20000
@@ -55,7 +55,7 @@ elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:
     os.mkdir(output_folder)
-    logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO)
+    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO)
     t = 0
     next_phase = None
     last_relaxed_constraint = original_latency
@@ -68,9 +68,9 @@ while t < fine_pruning_iterations:
         input_caffemodel = last_finetuned_caffemodel
     # compute relaxed constraints
     current_relaxed_constraint = relaxed_constraint(t, cooling_function)
-    logging.info('The relaxed constraint in {}th iteration is {}'.format(t, current_relaxed_constraint))
 
     if next_phase is None or next_phase == 'bayesian optimization':
+        logging.info('The relaxed constraint in {}th iteration is {}'.format(t, current_relaxed_constraint))
         logging.info('Start {}th fine-pruning iteration'.format(t))
         # first do bayesian optimization given latency tradeoff factor
         start = time.time()
@@ -122,6 +122,7 @@ while t < fine_pruning_iterations:
         command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, solver_file,
                    last_finetuned_caffemodel, str(min_acc), str(max_iter), finetuning_logfile]
         os.system(' '.join(command))
+        logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):
             logging.error('Cannot find the finetuned caffemodel')
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
@@ -129,6 +130,5 @@ while t < fine_pruning_iterations:
 
     t += 1
 
-print('Final result', max_acc)
 
 

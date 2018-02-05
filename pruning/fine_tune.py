@@ -37,20 +37,24 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     iter = 0
     while iter < max_iter:
         # test
-        if iter != 0 and iter % test_interval == 0:
+        if iter % test_interval == 0:
             # switch net to test mode
             solver.test_nets[0].share_with(solver.net)
             accuracy = 0
-            for i in range(test_interval):
-                accuracy += solver.test_nets[0].forward()['acc']
+            loss = 0
+            for i in range(test_iters):
+                solver.test_nets[0].forward()
+                accuracy += solver.test_nets[0].blobs['accuracy'].data
+                loss += solver.test_nets[0].blobs['loss'].data
             accuracy /= test_iters
-            logging.info('Test accuracy: {:.2f}'.format(accuracy))
+            loss /= test_iters
+            logging.info('Test in iteration {}, accuracy: {:.2f}, loss: {:.2f}'.format(iter, accuracy, loss))
             if accuracy > min_acc:
                 break
 
         # fine-tune
         solver.step(1)
-        loss = solver.net.blobs['loss'].data.copy()
+        loss = solver.net.blobs['loss'].data
         if iter % disp_interval == 0 or iter + 1 == max_iter:
             logging.info('Training iteration {}, loss: {:.2f}'.format(iter, loss))
         iter += 1
