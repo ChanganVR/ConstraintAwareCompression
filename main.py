@@ -22,10 +22,13 @@ batch_size = 32
 original_latency = 238
 latency_constraint = 80
 fine_pruning_iterations = 5
-bo_iters = 40
+# for bayesian optimization
+init_points = 30
+bo_iters = 30
+kappa = 10
 cooling_function = 'linear'
-min_acc = 0.53
-max_iter = 20000
+min_acc = 0.55
+max_iter = 100000
 os.environ['OMP_NUM_THREADS'] = '4'
 os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 
@@ -34,6 +37,7 @@ original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 solver_file = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
 output_folder = 'results/fp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
+# output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 0.0625)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
@@ -82,7 +86,8 @@ while t < fine_pruning_iterations:
         objective_function.original_latency = last_relaxed_constraint
         last_relaxed_constraint = current_relaxed_constraint
         objective_function.input_caffemodel = input_caffemodel
-        bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,), objective_function=objective_function)
+        bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
+                              objective_function=objective_function, init_points=init_points, kappa=kappa)
         logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 

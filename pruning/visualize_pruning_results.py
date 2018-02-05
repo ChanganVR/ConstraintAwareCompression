@@ -154,22 +154,37 @@ def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_wi
     plt.show()
 
 
+def plot_objective_time(results):
+    max_objective_values = [results[0].objective_value]
+    for res in results[1:]:
+        if res.objective_value > max_objective_values[-1]:
+            max_objective_values.append(res.objective_value)
+        else:
+            max_objective_values.append(max_objective_values[-1])
+    iterations = list(range(len(results)))
+    plt.plot(iterations, max_objective_values)
+    plt.xlabel('Iterations')
+    plt.ylabel('Objective values')
+    plt.title('Objective values vs iterations')
+    plt.show()
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Log file needs to be specified')
-        exit(1)
+        raise ValueError('Log file needs to be specified')
     else:
-        res = []
+        log_results = []
         for log_file in sys.argv[1:]:
-            res += read_log(sys.argv[1])
-    print('Number of iterations:', len(res))
-    find_max_objective(res)
-    print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(res, 1, (0, 0.55))))
-    range_distribution(res)
-    plot_accuracy_latency(res, saturation=True, accuracy_range=(0.5, 0.57))
+            log_results += read_log(sys.argv[1])
+    print('Number of iterations:', len(log_results))
+    find_max_objective(log_results)
+    print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(log_results, 1, (0, 0.55))))
+    range_distribution(log_results)
+    plot_accuracy_latency(log_results, saturation=True)
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
-    # plot_uac_vs_iteration(res, 1)
+    plot_uac_vs_iteration(log_results, 1)
+    plot_objective_time(log_results)
     # plot_accuracy_latency_ratio(res, saturation=True)
 
 # sample pruning log
