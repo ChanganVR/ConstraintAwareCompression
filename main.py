@@ -5,6 +5,7 @@ import os
 import time
 import json
 import sys
+import math
 from pruning.objective_functions import alexnet_objective_function
 from pruning.bayesian_optimization import bayesian_optimization
 from pruning.utils import read_fp_log, find_next_phase
@@ -22,11 +23,12 @@ batch_size = 32
 original_latency = 238
 latency_constraint = 80
 fine_pruning_iterations = 5
+exp_coefficient = 0.5
 # for bayesian optimization
-init_points = 30
+init_points = 20
 bo_iters = 30
 kappa = 10
-cooling_function = 'linear'
+cooling_function = 'exponential'
 min_acc = 0.55
 max_iter = 100000
 os.environ['OMP_NUM_THREADS'] = '4'
@@ -37,7 +39,7 @@ original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 solver_file = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
 output_folder = 'results/fp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
-# output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 0.0625)
+# output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 1)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
@@ -46,12 +48,17 @@ log_file = os.path.join(output_folder, 'fine_pruning.log')
 def relaxed_constraint(iteration, cooling_func):
     if cooling_func == 'linear':
         return original_latency + (iteration+1)/fine_pruning_iterations * (latency_constraint - original_latency)
-
+    elif cooling_func == 'exponential':
+        # using Newton's Law of Cooling
+        # plot: 65+(238-65)*exp(-0.5x) from 1 to 5
+        return 65 + (original_latency - 65) * math.exp(-1*exp_coefficient*(iteration+1))
+    else:
+        raise NotImplementedError
 
 if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO)
     t, next_phase = find_next_phase(log_file)
-    if next_phase != 'bayesian optimization':
+    if next_phase == 'bayesian optimization':
         last_relaxed_constraint = relaxed_constraint(t-1, cooling_function)
     else:
         last_relaxed_constraint = relaxed_constraint(t, cooling_function)

@@ -62,7 +62,7 @@ def read_fp_log(log_file, bo_num=None):
         elif len(boundaries) == 2:
             lines = lines[boundaries[0]: boundaries[1]]
         else:
-            raise RuntimeError('Fail to read log')
+            raise RuntimeError('Fail to find {}th fine-pruning iteration log'.format(bo_num))
 
     sampling_counter = 0
     for i, line in enumerate(lines):

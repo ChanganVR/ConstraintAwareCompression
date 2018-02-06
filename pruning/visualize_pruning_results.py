@@ -3,7 +3,7 @@ from __future__ import division
 import sys
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from utils import calculate_alexnet_compression_rate, read_log, Result
+from utils import calculate_alexnet_compression_rate, read_log, Result, read_fp_log
 
 
 def find_max_objective(results):
@@ -172,10 +172,12 @@ def plot_objective_time(results):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         raise ValueError('Log file needs to be specified')
+    elif len(sys.argv) == 2:
+        log_results = read_log(sys.argv[1])
+    elif len(sys.argv) == 3:
+        log_results = read_fp_log(sys.argv[1], int(sys.argv[2]))
     else:
-        log_results = []
-        for log_file in sys.argv[1:]:
-            log_results += read_log(sys.argv[1])
+        raise ValueError('Input arguments format is wrong')
     print('Number of iterations:', len(log_results))
     find_max_objective(log_results)
     print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(log_results, 1, (0, 0.55))))
