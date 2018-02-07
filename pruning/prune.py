@@ -3,14 +3,16 @@ import numpy as np
 import sys
 import json
 import os
-# supress log output from caffe loading
-os.environ['GLOG_minloglevel'] = '2'
-import caffe
+import logging
 from utils import read_log
 from visualize_pruning_results import find_best_results
 
 
 def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):
+    # supress log output from caffe loading
+    os.environ['GLOG_minloglevel'] = '2'
+    import caffe
+    # logging.basicConfig(filename='prune_debug.log', filemode='w', level=logging.DEBUG)
     # read caffemodel weights
     net = caffe.Net(prototxt_file, input_caffemodel, caffe.TEST)
     for layer in net.params:
@@ -25,8 +27,9 @@ def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage
         threshold = np.percentile(np.abs(biases), pruning_percentage * 100)
         biases[np.abs(biases) < threshold] = 0
 
-    # finish pruning and write weights to temporary caffemodel
+    # finish pruning and writing weights to temporary caffemodel
     net.save(output_caffemodel)
+    # logging.info('Pruning done')
 
 
 def generate_best_models(dest_dir, log_file, caffemodel, prototxt):

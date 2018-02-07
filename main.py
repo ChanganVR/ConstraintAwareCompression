@@ -7,7 +7,7 @@ import json
 import sys
 import math
 from pruning.objective_functions import alexnet_objective_function
-from pruning.bayesian_optimization import bayesian_optimization
+from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
 from pruning.utils import read_fp_log, find_next_phase
 
 if len(sys.argv) == 1:
@@ -25,10 +25,12 @@ latency_constraint = 80
 fine_pruning_iterations = 5
 exp_coefficient = 0.5
 # for bayesian optimization
+constrained_optimization = True
 init_points = 20
 bo_iters = 30
 kappa = 10
 cooling_function = 'exponential'
+# for fine-tuning
 min_acc = 0.55
 max_iter = 100000
 os.environ['OMP_NUM_THREADS'] = '4'
@@ -38,7 +40,7 @@ os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 solver_file = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
-output_folder = 'results/fp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
+output_folder = 'results/cfp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
 # output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 1)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -85,16 +87,21 @@ while t < fine_pruning_iterations:
         logging.info('Start {}th fine-pruning iteration'.format(t))
         # first do bayesian optimization given latency tradeoff factor
         start = time.time()
-        # allow 4 percent drop in accuracy to trade off for 140 ms speedup
-        # latency tradeoff function changes according to cooling function
-        latency_tradeoff = (0.57-min_acc) * 100 / (last_relaxed_constraint - current_relaxed_constraint)
-        objective_function = alexnet_objective_function
-        objective_function.latency_tradeoff = latency_tradeoff
-        objective_function.original_latency = last_relaxed_constraint
-        last_relaxed_constraint = current_relaxed_constraint
-        objective_function.input_caffemodel = input_caffemodel
-        bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
-                              objective_function=objective_function, init_points=init_points, kappa=kappa)
+        if constrained_optimization:
+            output_prefix = output_folder + '/' + str(t)
+            constrained_bayesian_optimization(n_iter=bo_iters, init_points=init_points, input_caffemodel=input_caffemodel,
+                                              latency_constraint=current_relaxed_constraint, output_prefix=output_prefix)
+        else:
+            # allow 4 percent drop in accuracy to trade off for 140 ms speedup
+            # latency tradeoff function changes according to cooling function
+            latency_tradeoff = (0.57-min_acc) * 100 / (last_relaxed_constraint - current_relaxed_constraint)
+            objective_function = alexnet_objective_function
+            objective_function.latency_tradeoff = latency_tradeoff
+            objective_function.original_latency = last_relaxed_constraint
+            last_relaxed_constraint = current_relaxed_constraint
+            objective_function.input_caffemodel = input_caffemodel
+            bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
+                                  objective_function=objective_function, init_points=init_points, kappa=kappa)
         logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 

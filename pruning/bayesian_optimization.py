@@ -1,6 +1,7 @@
 import logging
 import os
 from bayes_opt import BayesianOptimization
+import matlab.engine
 
 
 def bayesian_optimization(n_iter=1000, tradeoff_factors=(1,), objective_function=None, init_points=10, kappa=5):
@@ -14,9 +15,17 @@ def bayesian_optimization(n_iter=1000, tradeoff_factors=(1,), objective_function
         bo.maximize(init_points=init_points, n_iter=local_n_iter, kappa=kappa)
 
 
+def constrained_bayesian_optimization(n_iter, init_points, input_caffemodel, latency_constraint, output_prefix):
+    eng = matlab.engine.start_matlab()
+    eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
+    # call matlab bayesian optimization code
+    eng.bayesian_optimization(n_iter, init_points, input_caffemodel, latency_constraint, output_prefix)
+    eng.bayesian_optimization('', 170)
+    eng.quit()
+
+
 if __name__ == '__main__':
-    iterations = 1000
-    tradeoff = [1, 2, 4, 16, 32]
+    constrained_bayesian_optimization(10, 4, 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel', 200)
 
     # if len(tradeoff) > 1:
     #     filename = 'results/pre_mbo_{}_{}_{}.log'.format(init_points, iterations, kappa)

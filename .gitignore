@@ -109,3 +109,4 @@ src/libxsmm/bin/
 cmake-build-debug/
 changan_clipq_codebase_no_caffe/
 *.log
+pruning/test_bayesopt.m
