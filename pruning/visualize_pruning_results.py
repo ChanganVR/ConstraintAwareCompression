@@ -154,15 +154,23 @@ def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_wi
     plt.show()
 
 
-def plot_objective_time(results):
-    max_objective_values = [results[0].objective_value]
-    for res in results[1:]:
-        if res.objective_value > max_objective_values[-1]:
-            max_objective_values.append(res.objective_value)
-        else:
-            max_objective_values.append(max_objective_values[-1])
+def plot_objective_time(results, min_obj=True):
+    if min_obj:
+        objective_values = [results[0].objective_value]
+        for res in results[1:]:
+            if res.objective_value < objective_values[-1]:
+                objective_values.append(res.objective_value)
+            else:
+                objective_values.append(objective_values[-1])
+    else:
+        objective_values = [results[0].objective_value]
+        for res in results[1:]:
+            if res.objective_value > objective_values[-1]:
+                objective_values.append(res.objective_value)
+            else:
+                objective_values.append(objective_values[-1])
     iterations = list(range(len(results)))
-    plt.plot(iterations, max_objective_values)
+    plt.plot(iterations, objective_values)
     plt.xlabel('Iterations')
     plt.ylabel('Objective values')
     plt.title('Objective values vs iterations')

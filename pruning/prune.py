@@ -9,7 +9,7 @@ from visualize_pruning_results import find_best_results
 
 
 def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):
-    # supress log output from caffe loading
+    # surpress log output from caffe loading
     os.environ['GLOG_minloglevel'] = '2'
     import caffe
     # logging.basicConfig(filename='prune_debug.log', filemode='w', level=logging.DEBUG)

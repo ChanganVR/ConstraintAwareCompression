@@ -112,7 +112,7 @@ def find_next_phase(log_file):
 def read_log(log_file):
     # read single bayesian optimization log file
     results = []
-    original_latency = 0
+    original_latency = 239
     with open(log_file) as fo:
         lines = [line.strip() for line in fo.readlines()]
     if len(lines) == 0:

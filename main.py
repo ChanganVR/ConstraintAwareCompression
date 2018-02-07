@@ -27,14 +27,12 @@ exp_coefficient = 0.5
 # for bayesian optimization
 constrained_optimization = True
 init_points = 20
-bo_iters = 30
+bo_iters = 100
 kappa = 10
 cooling_function = 'exponential'
 # for fine-tuning
 min_acc = 0.55
 max_iter = 100000
-os.environ['OMP_NUM_THREADS'] = '4'
-os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
 
 # some path variables
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
@@ -90,7 +88,8 @@ while t < fine_pruning_iterations:
         if constrained_optimization:
             output_prefix = output_folder + '/' + str(t)
             constrained_bayesian_optimization(n_iter=bo_iters, init_points=init_points, input_caffemodel=input_caffemodel,
-                                              latency_constraint=current_relaxed_constraint, output_prefix=output_prefix)
+                                              latency_constraint=current_relaxed_constraint, output_prefix=output_prefix,
+                                              original_latency=original_latency)
         else:
             # allow 4 percent drop in accuracy to trade off for 140 ms speedup
             # latency tradeoff function changes according to cooling function
