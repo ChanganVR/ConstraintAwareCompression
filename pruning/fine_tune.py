@@ -3,7 +3,7 @@ from __future__ import division
 import sys
 import os
 import logging
-os.environ['GLOG_minloglevel'] = '2'
+os.environ['GLOG_minloglevel'] = '0'
 sys.path.append('/local-scratch/changan-home/SkimCaffe/python')
 import caffe
 
@@ -21,14 +21,22 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     :param max_iter:
     :return:
     """
+    if log_file is None:
+        log_file = 'results/finetuning.log'
+    output_file = open(log_file, 'wt')
+    sys.stdout = output_file
+    sys.stderr = output_file
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
+                        datefmt="%Y-%m-%d %H:%M:%S")
+
     # some fine-tuning parameters
     test_iters = 50
     test_interval = 1000
     disp_interval = 10
-    if log_file is not None:
-        logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO)
-    else:
-        logging.basicConfig(filename='results/finetuning.log', filemode='w', level=logging.INFO)
+    # if log_file is not None:
+    #     logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO)
+    # else:
+    #     logging.basicConfig(filename='results/finetuning.log', filemode='w', level=logging.INFO)
     min_acc = float(min_acc)
     max_iter = int(max_iter)
 
@@ -61,8 +69,9 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
 
     # save learned weights
     solver.net.save(output_caffemodel)
+    output_file.close()
 
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 7
+    assert len(sys.argv) >= 6
     fine_tune(*sys.argv[1:])

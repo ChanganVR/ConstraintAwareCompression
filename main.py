@@ -8,7 +8,7 @@ import sys
 import math
 from pruning.objective_functions import alexnet_objective_function
 from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
-from pruning.utils import read_fp_log, find_next_phase
+from pruning.utils import read_fp_log, find_next_phase, read_log
 
 if len(sys.argv) == 1:
     resume_training = False
@@ -37,7 +37,7 @@ max_iter = 100000
 # some path variables
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-solver_file = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
+finetune_solver = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
 output_folder = 'results/cfp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
 # output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 1)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
@@ -56,7 +56,8 @@ def relaxed_constraint(iteration, cooling_func):
         raise NotImplementedError
 
 if resume_training:
-    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO)
+    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
+                        format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     t, next_phase = find_next_phase(log_file)
     if next_phase == 'bayesian optimization':
         last_relaxed_constraint = relaxed_constraint(t-1, cooling_function)
@@ -66,7 +67,8 @@ elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:
     os.mkdir(output_folder)
-    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO)
+    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
+                        format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     t = 0
     next_phase = None
     last_relaxed_constraint = original_latency
@@ -106,7 +108,8 @@ while t < fine_pruning_iterations:
 
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
-        results = read_fp_log(log_file=log_file, bo_num=t)
+        results = read_log(log_file=os.path.join(output_folder, str(t)+'bo.log'))
+        # results = read_fp_log(log_file=log_file, bo_num=t)
         max_acc = 0
         max_res = None
         # TODO: what if there is no point sampled below the relaxed_constraint? increase the sampling point or ...?
@@ -137,7 +140,7 @@ while t < fine_pruning_iterations:
         start = time.time()
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')
-        command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, solver_file,
+        command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_solver,
                    last_finetuned_caffemodel, str(min_acc), str(max_iter), finetuning_logfile]
         os.system(' '.join(command))
         logging.debug(' '.join(command))

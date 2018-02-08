@@ -18,7 +18,8 @@ def matlab_alexnet_objective_function(input_caffemodel, latency_constraint, outp
     log_file = output_prefix + 'bo.log'
     if not hasattr(objective_function, 'log_file') or objective_function.log_file != log_file:
         reload(logging)
-        logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO)
+        logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
+                            format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Latency constraint: {}'.format(latency_constraint))
         objective_function.log_file = log_file
 
@@ -155,7 +156,8 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_percenta
 
 if __name__ == '__main__':
     os.chdir('/local-scratch/changan-home/SkimCaffe')
-    logging.basicConfig(filename='results/objective_function_debug.log', filemode='w', level=logging.DEBUG)
+    logging.basicConfig(filename='results/objective_function_debug.log', filemode='w', level=logging.DEBUG,
+                        format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     # eng = matlab.engine.start_matlab()
     # no pruning, basically copy caffemodel
     # loss = alexnet_objective_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
