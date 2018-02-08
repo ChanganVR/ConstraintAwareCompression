@@ -27,7 +27,7 @@ exp_coefficient = 0.5
 # for bayesian optimization
 constrained_optimization = True
 init_points = 20
-bo_iters = 100
+bo_iters = 200
 kappa = 10
 cooling_function = 'exponential'
 # for fine-tuning
@@ -108,7 +108,7 @@ while t < fine_pruning_iterations:
 
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
-        results = read_log(log_file=os.path.join(output_folder, str(t)+'bo.log'))
+        results, _ = read_log(log_file=os.path.join(output_folder, str(t)+'bo.log'))
         # results = read_fp_log(log_file=log_file, bo_num=t)
         max_acc = 0
         max_res = None
@@ -136,7 +136,6 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'finetuning':
         # avoid affecting latency measurement, run fine-tuning and pruning from command line
         # fine-tune the pruned caffemodel until acc > min_acc or iteration > max_iter
-        # TODO: should min_acc, max_iter be a function of time?
         start = time.time()
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')

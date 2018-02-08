@@ -119,6 +119,7 @@ def read_log(log_file):
         raise IOError('Can not read log file')
 
     sampling_counter = 0
+    constraint = None
     for i, line in enumerate(lines):
         # need to have a full pruning result
         if i + 9 >= len(lines):
@@ -127,9 +128,11 @@ def read_log(log_file):
             sampling_counter = 0
         if 'Original latency' in line:
             original_latency = float(line.split()[-1])
+        if 'Latency constraint' in line:
+            constraint = float(line.split()[-1])
         if 'Pruning starts' in line:
-            layers = [x for x in lines[i+1][10:].split()]
-            pruning_percentages = [float(x) for x in lines[i+2][10:].split()]
+            layers = [x for x in lines[i+1].split()[3:]]
+            pruning_percentages = [float(x) for x in lines[i+2].split()[3:]]
             pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
             pruning_time = float(lines[i+3].split()[-1])
             testing_latency_time = float(lines[i+4].split()[-1])
@@ -143,7 +146,7 @@ def read_log(log_file):
             sampling_counter += 1
             results.append(result)
 
-    return results
+    return results, constraint
 
 
 def calculate_compression_rate(caffemodel_file, prototxt_file):

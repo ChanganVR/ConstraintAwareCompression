@@ -40,6 +40,21 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     min_acc = float(min_acc)
     max_iter = int(max_iter)
 
+    # solver_config = caffe.SolverParameter()
+    # solver_config.train_net = 'models/bvlc_reference_caffenet/train_val_ft.prototxt'
+    # solver_config.base_lr = 0.001
+    # solver_config.momentum = 0.9
+    # solver_config.weight_decay = 0.00005
+    # solver_config.lr_policy = 'step'
+    # solver_config.gamma = 0.01
+    # solver_config.step = 1000
+    # solver_config.max_iter = 100000
+    # solver_config.snapshot = 2000
+    # solver_config.snapshot_prefix = output_caffemodel
+    # solver_config.type = 'sgd'
+    # solver_config.display = 1
+    # solver_config.regularization_type = 'L1'
+
     solver = caffe.get_solver(solver_file)
     solver.net.copy_from(input_caffemodel)
     iter = 0
@@ -57,7 +72,7 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
             accuracy /= test_iters
             loss /= test_iters
             logging.info('Test in iteration {}, accuracy: {:.2f}, loss: {:.2f}'.format(iter, accuracy, loss))
-            if accuracy > min_acc:
+            if accuracy >= min_acc:
                 break
 
         # fine-tune

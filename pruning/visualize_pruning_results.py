@@ -181,7 +181,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         raise ValueError('Log file needs to be specified')
     elif len(sys.argv) == 2:
-        log_results = read_log(sys.argv[1])
+        log_results, constraint = read_log(sys.argv[1])
     elif len(sys.argv) == 3:
         log_results = read_fp_log(sys.argv[1], int(sys.argv[2]))
     else:

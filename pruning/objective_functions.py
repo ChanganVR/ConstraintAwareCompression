@@ -63,7 +63,7 @@ def alexnet_objective_function(**pruning_percentage_dict):
         if abs(test_env_latency - original_latency) > 10:
             logging.error('Test original latency is off from normal latency too much. Check the environment!')
         else:
-            alexnet_objective_function.test_pretrained = True
+            alexnet_objective_function.test_env = True
     prune(input_caffemodel, original_prototxt, temp_caffemodel, pruning_percentage_dict)
     # batch size for latency is 8, for accuracy is 50
     # iteration number for latency is 3, for accuracy is 50
