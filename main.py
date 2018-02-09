@@ -6,6 +6,7 @@ import time
 import json
 import sys
 import math
+import re
 from pruning.objective_functions import alexnet_objective_function
 from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
 from pruning.utils import read_fp_log, find_next_phase, read_log
@@ -50,8 +51,8 @@ def relaxed_constraint(iteration, cooling_func):
         return original_latency + (iteration+1)/fine_pruning_iterations * (latency_constraint - original_latency)
     elif cooling_func == 'exponential':
         # using Newton's Law of Cooling
-        # plot: 65+(238-65)*exp(-0.5x) from 1 to 5
-        return 65 + (original_latency - 65) * math.exp(-1*exp_coefficient*(iteration+1))
+        # plot: 80+(238-80)*exp(-0.5x)+(80-238)*exp(-2.5) from 1 to 5
+        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1*exp_coefficient*(iteration+1)) + (latency_constraint - original_latency) * math.exp(-1*exp_coefficient*(fine_pruning_iterations+1))
     else:
         raise NotImplementedError
 
@@ -59,10 +60,12 @@ if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     t, next_phase = find_next_phase(log_file)
+    logging.info('Current fine-pruning iteration is {}, next phase is {}'.format(t, next_phase))
     if next_phase == 'bayesian optimization':
         last_relaxed_constraint = relaxed_constraint(t-1, cooling_function)
     else:
         last_relaxed_constraint = relaxed_constraint(t, cooling_function)
+    re.sub('\d', str(t-1), last_finetuned_caffemodel)
 elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:

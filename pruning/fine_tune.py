@@ -33,7 +33,7 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
                         datefmt="%Y-%m-%d %H:%M:%S")
 
     # some fine-tuning parameters
-    test_iters = 50
+    test_iters = 200
     test_interval = 1000
     disp_interval = 10
     # if log_file is not None:
