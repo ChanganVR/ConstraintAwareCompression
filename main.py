@@ -136,6 +136,7 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'finetuning':
         # avoid affecting latency measurement, run fine-tuning and pruning from command line
         # fine-tune the pruned caffemodel until acc > min_acc or iteration > max_iter
+        # TODO: should min_acc be a function of time? since the accuracy is harder to recover later
         start = time.time()
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')

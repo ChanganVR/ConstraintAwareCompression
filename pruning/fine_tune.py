@@ -23,7 +23,10 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     """
     if log_file is None:
         log_file = 'results/finetuning.log'
-    output_file = open(log_file, 'wt')
+    if os.path.exists(output_caffemodel):
+        output_file = open(log_file, 'a+')
+    else:
+        output_file = open(log_file, 'w')
     sys.stdout = output_file
     sys.stderr = output_file
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
@@ -56,7 +59,12 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     # solver_config.regularization_type = 'L1'
 
     solver = caffe.get_solver(solver_file)
-    solver.net.copy_from(input_caffemodel)
+    if not os.path.exists(output_caffemodel):
+        solver.net.copy_from(input_caffemodel)
+        logging.info('Fine-tune caffemodel from {}'.format(input_caffemodel))
+    else:
+        solver.net.copy_from(output_caffemodel)
+        logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
     iter = 0
     while iter < max_iter:
         # test
@@ -71,9 +79,11 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
                 loss += solver.test_nets[0].blobs['loss'].data
             accuracy /= test_iters
             loss /= test_iters
-            logging.info('Test in iteration {}, accuracy: {:.2f}, loss: {:.2f}'.format(iter, accuracy, loss))
+            logging.info('Test in iteration {}, accuracy: {:.3f}, loss: {:.2f}'.format(iter, accuracy, loss))
             if accuracy >= min_acc:
                 break
+            solver.net.save(output_caffemodel)
+            logging.info('Model saved in {}'.format(output_caffemodel))
 
         # fine-tune
         solver.step(1)
@@ -84,6 +94,8 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
 
     # save learned weights
     solver.net.save(output_caffemodel)
+    logging.info('Model saved in {}'.format(output_caffemodel))
+    logging.info('Fine-tuning ends')
     output_file.close()
 
 

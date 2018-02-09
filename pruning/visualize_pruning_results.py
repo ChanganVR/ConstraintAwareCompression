@@ -154,14 +154,15 @@ def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_wi
     plt.show()
 
 
-def plot_objective_time(results, min_obj=True):
+def plot_objective_time(results, constraint=None, min_obj=True):
     if min_obj:
-        objective_values = [results[0].objective_value]
-        for res in results[1:]:
-            if res.objective_value < objective_values[-1]:
-                objective_values.append(res.objective_value)
-            else:
-                objective_values.append(objective_values[-1])
+        objective_values = [0]
+        for res in results:
+            if constraint is not None:
+                if res.objective_value < objective_values[-1] and res.latency < constraint:
+                    objective_values.append(res.objective_value)
+                else:
+                    objective_values.append(objective_values[-1])
     else:
         objective_values = [results[0].objective_value]
         for res in results[1:]:
@@ -169,7 +170,7 @@ def plot_objective_time(results, min_obj=True):
                 objective_values.append(res.objective_value)
             else:
                 objective_values.append(objective_values[-1])
-    iterations = list(range(len(results)))
+    iterations = list(range(len(objective_values)))
     plt.plot(iterations, objective_values)
     plt.xlabel('Iterations')
     plt.ylabel('Objective values')
@@ -194,7 +195,7 @@ if __name__ == '__main__':
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
     plot_uac_vs_iteration(log_results, 1)
-    plot_objective_time(log_results)
+    plot_objective_time(log_results, constraint)
     # plot_accuracy_latency_ratio(res, saturation=True)
 
 # sample pruning log
