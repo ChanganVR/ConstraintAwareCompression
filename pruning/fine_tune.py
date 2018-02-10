@@ -21,6 +21,13 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     :param max_iter:
     :return:
     """
+    # some fine-tuning parameters
+    test_iters = 1000
+    test_interval = 1000
+    disp_interval = 100
+    min_acc = float(min_acc)
+    max_iter = int(max_iter)
+
     if log_file is None:
         log_file = 'results/finetuning.log'
     if os.path.exists(output_caffemodel):
@@ -31,17 +38,11 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     sys.stderr = output_file
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
-
-    # some fine-tuning parameters
-    test_iters = 1000
-    test_interval = 1000
-    disp_interval = 100
-    # if log_file is not None:
-    #     logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO)
-    # else:
-    #     logging.basicConfig(filename='results/finetuning.log', filemode='w', level=logging.INFO)
-    min_acc = float(min_acc)
-    max_iter = int(max_iter)
+    logging.info('{:<20} {}'.format('Test iterations:', test_iters))
+    logging.info('{:<20} {}'.format('Test interval:', test_interval))
+    logging.info('{:<20} {}'.format('Display interval:', disp_interval))
+    logging.info('{:<20} {}'.format('Min accuracy:', min_acc))
+    logging.info('{:<20} {}'.format('Max iterations:', max_iter))
 
     # solver_config = caffe.SolverParameter()
     # solver_config.train_net = 'models/bvlc_reference_caffenet/train_val_ft.prototxt'

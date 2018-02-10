@@ -1,4 +1,5 @@
-function results = bayesian_optimization(n_iter, init_points, input_caffemodel, latency_constraint, output_prefix, original_latency)
+function results = bayesian_optimization(n_iter, init_points, input_caffemodel, last_constraint, ...
+                                         latency_constraint, output_prefix, original_latency)
     [~, ~, isloaded] = pyversion;
     if ~isloaded
         pyversion /local-scratch/changan-home/.pyenv/versions/py2/bin/python
@@ -27,7 +28,8 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
 %     kwa = pyargs('input_caffemodel', input_caffemodel, 'latency_constraint', latency_constraint, ...
 %                  'output_prefix', output_prefix);
 
-    fun = @(input_params)alexnet_objective_function(input_params, input_caffemodel, latency_constraint, output_prefix, original_latency);
+    fun = @(input_params)alexnet_objective_function(input_params, input_caffemodel, last_constraint, ...
+                                                    latency_constraint, output_prefix, original_latency);
     
     results = bayesopt(fun, [conv1, conv2, conv3, conv4, conv5, fc6, fc7, fc8], ...
         'NumCoupledConstraints', 1, 'ExplorationRatio', 0.5, ...
@@ -37,10 +39,11 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
 end
 
 
-function [objective, constraint] = alexnet_objective_function(P, input_caffemodel, latency_constraint, output_prefix, original_latency)
+function [objective, constraint] = alexnet_objective_function(P, input_caffemodel, last_constraint, ...
+                                                              latency_constraint, output_prefix, original_latency)
     % wrapper for python alexnet objective function
     objective_func = py.pruning.objective_functions.matlab_alexnet_objective_function(...
-        input_caffemodel, latency_constraint, output_prefix, original_latency);
+        input_caffemodel, last_constraint, latency_constraint, output_prefix, original_latency);
     
     kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
         'conv5', P.conv5, 'fc6', P.fc6, 'fc7', P.fc7, 'fc8', P.fc8);

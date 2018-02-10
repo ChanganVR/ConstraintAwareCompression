@@ -5,7 +5,7 @@ import json
 import os
 import logging
 from utils import read_log
-from visualize_pruning_results import find_best_results
+from visualize_pruning_results import find_best_logs
 
 
 def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):
@@ -34,7 +34,7 @@ def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage
 
 def generate_best_models(dest_dir, log_file, caffemodel, prototxt):
     results = read_log(log_file)
-    best_results = find_best_results(results, accuracy_range=(0, 0.55), bin_width=0.05)
+    best_results = find_best_logs(results, accuracy_range=(0, 0.55), bin_width=0.05)
     for res in best_results:
         model_dest = os.path.join(dest_dir, 'latency_{}_acc_{}.caffemodel'.format(int(res.latency), int(res.accuracy*100)))
         prune(caffemodel, prototxt, model_dest, res.pruning_dict)

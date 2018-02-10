@@ -3,23 +3,23 @@ from __future__ import division
 import sys
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from utils import calculate_alexnet_compression_rate, read_log, Result, read_fp_log
+from utils import calculate_alexnet_compression_rate, read_log, Log, read_fp_log
 
 
-def find_max_objective(results):
-    max_res = results[0]
+def find_max_objective(logs):
+    max_log = logs[0]
     max_iter = 1
-    for iter, res in enumerate(results):
-        if res.latency_ratio < max_res.latency_ratio:
-            max_res = res
+    for iter, log in enumerate(logs):
+        if log.latency_ratio < max_log.latency_ratio:
+            max_log = log
             max_iter = iter
     print('Find max objective value in iteration', max_iter)
-    print(max_res)
+    print(max_log)
 
 
-def plot_accuracy_latency(results, title=None, saturation=False, accuracy_range=None):
-    latencies = [res.latency for res in results]
-    accuracies = [res.accuracy for res in results]
+def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None):
+    latencies = [log.latency for log in logs]
+    accuracies = [log.accuracy for log in logs]
     if not saturation:
         plt.plot(accuracies, latencies, 'ro')
     else:
@@ -36,10 +36,10 @@ def plot_accuracy_latency(results, title=None, saturation=False, accuracy_range=
     plt.show()
 
 
-def plot_accuracy_latency_ratio(results, title=None, saturation=False):
-    ratios = [res.latency_ratio for res in results]
-    accuracies = [res.accuracy for res in results]
-    saturations = [res.sampling_time for res in results]
+def plot_accuracy_latency_ratio(logs, title=None, saturation=False):
+    ratios = [log.latency_ratio for log in logs]
+    accuracies = [log.accuracy for log in logs]
+    saturations = [log.sampling_time for log in logs]
     if not saturation:
         plt.plot(accuracies, ratios, 'ro')
     else:
@@ -55,25 +55,25 @@ def plot_accuracy_latency_ratio(results, title=None, saturation=False):
     plt.show()
 
 
-def area_under_curve_diff(results, original_latency, accuracy_range=(0, 0.5), bin_width=0.01):
+def area_under_curve_diff(logs, original_latency, accuracy_range=(0, 0.5), bin_width=0.01):
     # calculate the AUC difference for the last sampled set of parameters
     # the problem with using AUC is that with the same sampled parameter, the objective may be different,
     # which depends on the history of sampled parameters
     # the problem of using AUC difference is, as BO goes on, AUC difference is smaller and smaller
     # and is not the same as our real objective
     # Both of them violate the bayesian process assumption (continuity)
-    last_area = area_under_curve(results[:-1], original_latency, accuracy_range, bin_width)
-    current_area = area_under_curve(results, original_latency, accuracy_range, bin_width)
+    last_area = area_under_curve(logs[:-1], original_latency, accuracy_range, bin_width)
+    current_area = area_under_curve(logs, original_latency, accuracy_range, bin_width)
     return last_area - current_area
 
 
-def area_under_curve(results, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, ratio=True):
+def area_under_curve(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, ratio=True):
     # accuracy_dict stores accuracy range as key and its corresponding latencies as value
     accuracy_dict = defaultdict(list)
-    for result in results:
-        if accuracy_range[0] <= result.accuracy <= accuracy_range[1]:
-            key = int((result.accuracy-accuracy_range[0])/bin_width)
-            accuracy_dict[key].append(result)
+    for log in logs:
+        if accuracy_range[0] <= log.accuracy <= accuracy_range[1]:
+            key = int((log.accuracy-accuracy_range[0])/bin_width)
+            accuracy_dict[key].append(log)
 
     area = 0
     for i in range(int((accuracy_range[1]-accuracy_range[0])/bin_width)):
@@ -82,49 +82,49 @@ def area_under_curve(results, upper_bound, accuracy_range=(0, 0.55), bin_width=0
             area += bin_width * upper_bound
         else:
             if ratio:
-                area += bin_width * min(accuracy_dict[i], key=Result.get_ratio).latency_ratio
+                area += bin_width * min(accuracy_dict[i], key=Log.get_ratio).latency_ratio
             else:
-                area += bin_width * min(accuracy_dict[i], key=Result.get_latency).latency
+                area += bin_width * min(accuracy_dict[i], key=Log.get_latency).latency
     return area
 
 
-def range_distribution(results, accuracy_range=(0, 0.55), bin_width=0.1):
+def range_distribution(logs, accuracy_range=(0, 0.55), bin_width=0.1):
     # number of points falling in each accuracy bin
     accuracy_dict = defaultdict(list)
-    for result in results:
-        bin_num = int((result.accuracy-accuracy_range[0])/bin_width)
-        accuracy_dict[bin_num].append(result)
+    for log in logs:
+        bin_num = int((log.accuracy-accuracy_range[0])/bin_width)
+        accuracy_dict[bin_num].append(log)
 
     for i in range(int((accuracy_range[1] - accuracy_range[0])/bin_width)):
         print('Range [{}, {}]: {}'.format(bin_width*i, bin_width*(i+1), len(accuracy_dict[i])))
 
 
-def find_best_results(results, accuracy_range=(0, 0.55), bin_width=0.01):
+def find_best_logs(logs, accuracy_range=(0, 0.55), bin_width=0.01):
     # search for each accuracy bin with minimal latency
     accuracy_dict = defaultdict(list)
-    for result in results:
-        if accuracy_range[0] <= result.accuracy <= accuracy_range[1]:
-            key = int((result.accuracy-accuracy_range[0])/bin_width)
-            accuracy_dict[key].append(result)
-    best_results = [min(accuracy_dict[key], key=Result.get_latency) for key in accuracy_dict]
+    for log in logs:
+        if accuracy_range[0] <= log.accuracy <= accuracy_range[1]:
+            key = int((log.accuracy-accuracy_range[0])/bin_width)
+            accuracy_dict[key].append(log)
+    best_logs = [min(accuracy_dict[key], key=Log.get_latency) for key in accuracy_dict]
 
-    return best_results
+    return best_logs
 
 
-def plot_lower_bound_curve(results):
+def plot_lower_bound_curve(logs):
     bin_width = 0.01
-    best_results = find_best_results(results, bin_width=bin_width)
-    plot_accuracy_latency(best_results, title='Lower bound curve with search bin width {}'.format(bin_width))
+    best_logs = find_best_logs(logs, bin_width=bin_width)
+    plot_accuracy_latency(best_logs, title='Lower bound curve with search bin width {}'.format(bin_width))
 
 
-def plot_latency_compression_curve(results):
+def plot_latency_compression_curve(logs):
     # first find the best pruning parameter for a given accuracy bin
     bin_width = 0.01
-    best_results = find_best_results(results, bin_width=bin_width)
+    best_logs = find_best_logs(logs, bin_width=bin_width)
 
     # plots the graph
-    latencies = [res.latency for res in best_results]
-    compression_rates = [calculate_alexnet_compression_rate(res.pruning_dict) for res in best_results]
+    latencies = [log.latency for log in best_logs]
+    compression_rates = [calculate_alexnet_compression_rate(log.pruning_dict) for log in best_logs]
     plt.plot(compression_rates, latencies, 'ro')
     plt.xlabel('Compression rate')
     plt.ylabel('Latency(ms)')
@@ -134,12 +134,12 @@ def plot_latency_compression_curve(results):
     plt.show()
 
 
-def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False):
+def plot_uac_vs_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False):
     iterations = []
     uacs = []
-    for i, result in enumerate(results):
+    for i, log in enumerate(logs):
         iterations.append(i)
-        uacs.append(area_under_curve(results[:i+1], upper_bound, accuracy_range, bin_width))
+        uacs.append(area_under_curve(logs[:i + 1], upper_bound, accuracy_range, bin_width))
     if diff:
         temp = []
         for i in range(len(uacs)-1):
@@ -154,20 +154,20 @@ def plot_uac_vs_iteration(results, upper_bound, accuracy_range=(0, 0.55), bin_wi
     plt.show()
 
 
-def plot_objective_time(results, constraint=None, min_obj=True):
+def plot_objective_time(logs, constraint=None, min_obj=True):
     if min_obj:
         objective_values = [0]
-        for res in results:
+        for log in logs:
             if constraint is not None:
-                if res.objective_value < objective_values[-1] and res.latency < constraint:
-                    objective_values.append(res.objective_value)
+                if log.objective_value < objective_values[-1] and log.latency < constraint:
+                    objective_values.append(log.objective_value)
                 else:
                     objective_values.append(objective_values[-1])
     else:
-        objective_values = [results[0].objective_value]
-        for res in results[1:]:
-            if res.objective_value > objective_values[-1]:
-                objective_values.append(res.objective_value)
+        objective_values = [logs[0].objective_value]
+        for log in logs[1:]:
+            if log.objective_value > objective_values[-1]:
+                objective_values.append(log.objective_value)
             else:
                 objective_values.append(objective_values[-1])
     iterations = list(range(len(objective_values)))

@@ -15,11 +15,13 @@ def bayesian_optimization(n_iter=1000, tradeoff_factors=(1,), objective_function
         bo.maximize(init_points=init_points, n_iter=local_n_iter, kappa=kappa)
 
 
-def constrained_bayesian_optimization(n_iter, init_points, input_caffemodel, latency_constraint, output_prefix, original_latency):
+def constrained_bayesian_optimization(n_iter, init_points, input_caffemodel, last_constraint,
+                                      latency_constraint, output_prefix, original_latency):
     eng = matlab.engine.start_matlab()
     eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
     # call matlab bayesian optimization code
-    eng.bayesian_optimization(n_iter, init_points, input_caffemodel, latency_constraint, output_prefix, original_latency)
+    eng.bayesian_optimization(n_iter, init_points, input_caffemodel, last_constraint,
+                              latency_constraint, output_prefix, original_latency)
     eng.quit()
 
 

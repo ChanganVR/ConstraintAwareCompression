@@ -28,9 +28,9 @@ exp_factor = 0.5
 # for bayesian optimization
 constrained_optimization = True
 init_points = 20
-bo_iters = 200
+bo_iters = 100
 kappa = 10
-relaxation_function = 'one-step'
+relaxation_function = 'linear'
 # for fine-tuning
 min_acc = 0.55
 max_iter = 20000
@@ -41,7 +41,6 @@ original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.ca
 finetune_solver = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
 output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
                                                                exp_factor, relaxation_function)
-# output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 1)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
@@ -68,24 +67,23 @@ if resume_training:
         last_relaxed_constraint = relaxed_constraint(t - 1, relaxation_function)
     else:
         last_relaxed_constraint = relaxed_constraint(t, relaxation_function)
-    re.sub('\d', str(t-1), last_finetuned_caffemodel)
+    last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t-1))
 elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:
     os.mkdir(output_folder)
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    logging.info('{:<40} {}'.format('Original latency:', original_latency))
+    logging.info('{:<40} {}'.format('Latency constraint:', latency_constraint))
+    logging.info('{:<40} {}'.format('Constrained fine-pruning iterations:', fine_pruning_iterations))
+    logging.info('{:<40} {}'.format('Bayesian optimization iterations:', bo_iters))
+    logging.info('{:<40} {}'.format('Relaxation function:', relaxation_function))
+    logging.info('{:<40} {}'.format('Exponential cooling factor:', exp_factor))
+
     t = 0
     next_phase = None
     last_relaxed_constraint = original_latency
-
-
-logging.info('Original latency: {}'.format(original_latency))
-logging.info('Latency constraint: {}'.format(latency_constraint))
-logging.info('Constrained fine-pruning iterations: {}'.format(fine_pruning_iterations))
-logging.info('Constrained bayesian optimization iterations: {}'.format(bo_iters))
-logging.info('Relaxation function: {}'.format(relaxation_function))
-logging.info('Exponential cooling factor: {}'.format(exp_factor))
 
 
 while t < fine_pruning_iterations:
@@ -103,9 +101,11 @@ while t < fine_pruning_iterations:
         start = time.time()
         if constrained_optimization:
             output_prefix = output_folder + '/' + str(t)
-            constrained_bayesian_optimization(n_iter=bo_iters, init_points=init_points, input_caffemodel=input_caffemodel,
-                                              latency_constraint=current_relaxed_constraint, output_prefix=output_prefix,
-                                              original_latency=original_latency)
+            constrained_bayesian_optimization(n_iter=bo_iters, init_points=init_points,
+                                              input_caffemodel=input_caffemodel,
+                                              last_constraint=last_relaxed_constraint,
+                                              latency_constraint=current_relaxed_constraint,
+                                              output_prefix=output_prefix, original_latency=original_latency)
         else:
             # allow 4 percent drop in accuracy to trade off for 140 ms speedup
             # latency tradeoff function changes according to cooling function
@@ -122,22 +122,21 @@ while t < fine_pruning_iterations:
 
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
-        results, _ = read_log(log_file=os.path.join(output_folder, str(t)+'bo.log'))
-        # results = read_fp_log(log_file=log_file, bo_num=t)
+        logs, _ = read_log(log_file=os.path.join(output_folder, str(t) + 'bo.log'))
         max_acc = 0
-        max_res = None
-        for res in results:
-            if res.latency <= current_relaxed_constraint and res.accuracy > max_acc:
-                max_res = res
-                max_acc = res.accuracy
+        max_log = None
+        for log in logs:
+            if log.latency <= current_relaxed_constraint and log.accuracy > max_acc:
+                max_log = log
+                max_acc = log.accuracy
         logging.info('The best point chosen satisfying the constraint:')
-        logging.info(max_res)
+        logging.info(max_log)
 
         # prune best point in sampled results
         start = time.time()
         pruning_dict_file = 'results/pruning_dict.txt'
         with open(pruning_dict_file, 'w') as fo:
-            json.dump(max_res.pruning_dict, fo)
+            json.dump(max_log.pruning_dict, fo)
         command = ['python', 'pruning/prune.py', input_caffemodel, original_prototxt,
                    best_sampled_caffemodel, pruning_dict_file]
         os.system(' '.join(command))
