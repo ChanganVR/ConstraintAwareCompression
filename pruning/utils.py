@@ -134,15 +134,15 @@ def read_log(log_file):
             layers = [x for x in lines[i+1].split()[3:]]
             pruning_percentages = [float(x) for x in lines[i+2].split()[3:]]
             pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
-            pruning_time = float(lines[i+3].split()[-1])
-            testing_latency_time = float(lines[i+4].split()[-1])
-            latency = float(lines[i+5].split()[-1])
-            testing_accuracy_time = float(lines[i+6].split()[-1])
-            accuracy = float(lines[i+7].split()[-1])
-            total_time = float(lines[i+8].split()[-1])
-            objective_value = float(lines[i+9].split()[-1])
-            result = Result(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                            accuracy, total_time, objective_value, latency / original_latency, sampling_counter)
+            # pruning_time = float(lines[i+3].split()[-1])
+            # testing_latency_time = float(lines[i+4].split()[-1])
+            latency = float(lines[i+3].split()[-1])
+            # testing_accuracy_time = float(lines[i+6].split()[-1])
+            accuracy = float(lines[i+4].split()[-1])
+            # total_time = float(lines[i+8].split()[-1])
+            objective_value = float(lines[i+5].split()[-1])
+            result = Result(pruning_dict, -1, -1, latency, -1, accuracy, -1, objective_value, 
+                    latency / original_latency, sampling_counter)
             sampling_counter += 1
             results.append(result)
 

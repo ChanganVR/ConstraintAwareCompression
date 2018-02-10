@@ -48,6 +48,7 @@ def alexnet_objective_function(**pruning_percentage_dict):
     # prune the network according to the parameters
     original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
     original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+    bo_acc_prototxt = 'models/bvlc_reference_caffenet/bo_acc.prototxt'
     test_env_prototxt = 'models/bvlc_reference_caffenet/test_env.prototxt'
     sconv_prototxt = 'models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt'
     temp_caffemodel = 'results/temp_alexnet.caffemodel'
@@ -55,7 +56,7 @@ def alexnet_objective_function(**pruning_percentage_dict):
     test_env(original_latency, test_env_prototxt, original_caffemodel, test_iters, sconv_prototxt, input_caffemodel)
     prune(input_caffemodel, original_prototxt, temp_caffemodel, pruning_percentage_dict)
     latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
-    accuracy = test_accuracy(original_prototxt, temp_caffemodel)
+    accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
 
     # objective is function of accuracy and latency
     logging.debug('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))

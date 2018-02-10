@@ -9,14 +9,14 @@ import math
 import re
 from pruning.objective_functions import alexnet_objective_function
 from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
-from pruning.utils import read_fp_log, find_next_phase, read_log
+from pruning.utils import find_next_phase, read_log
 
 if len(sys.argv) == 1:
     resume_training = False
 elif sys.argv[1] == 'resume':
     resume_training = True
 else:
-    raise ValueError('Command line argument error')
+    raise ValueError('Command line argument incorrect')
 
 # hyper parameters
 num_threads = 4
@@ -24,35 +24,38 @@ batch_size = 32
 original_latency = 238
 latency_constraint = 80
 fine_pruning_iterations = 5
-exp_coefficient = 0.5
+exp_factor = 0.5
 # for bayesian optimization
 constrained_optimization = True
 init_points = 20
 bo_iters = 200
 kappa = 10
-cooling_function = 'exponential'
+relaxation_function = 'one-step'
 # for fine-tuning
 min_acc = 0.55
-max_iter = 100000
+max_iter = 20000
 
 # some path variables
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 finetune_solver = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
-output_folder = 'results/cfp_{}_{}_{}'.format(fine_pruning_iterations, bo_iters, cooling_function)
+output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
+                                                               exp_factor, relaxation_function)
 # output_folder = 'results/bo/pts_{}_iter_{}_kappa_{}_to_{}'.format(init_points, bo_iters, kappa, 1)
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
 
 
-def relaxed_constraint(iteration, cooling_func):
-    if cooling_func == 'linear':
+def relaxed_constraint(iteration, relaxation_func):
+    if relaxation_func == 'linear':
         return original_latency + (iteration+1)/fine_pruning_iterations * (latency_constraint - original_latency)
-    elif cooling_func == 'exponential':
+    elif relaxation_func == 'exponential':
         # using Newton's Law of Cooling
         # plot: 80+(238-80)*exp(-0.5x)+(80-238)*exp(-2.5) from 1 to 5
-        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1*exp_coefficient*(iteration+1)) + (latency_constraint - original_latency) * math.exp(-1*exp_coefficient*(fine_pruning_iterations+1))
+        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1 * exp_factor * (iteration + 1)) + (latency_constraint - original_latency) * math.exp(-1 * exp_factor * (fine_pruning_iterations + 1))
+    elif relaxation_func == 'one-step':
+        return latency_constraint
     else:
         raise NotImplementedError
 
@@ -60,11 +63,11 @@ if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     t, next_phase = find_next_phase(log_file)
-    logging.info('Current fine-pruning iteration is {}, next phase is {}'.format(t, next_phase))
+    logging.info('Resume training: current fine-pruning iteration is {}, next phase is {}'.format(t, next_phase))
     if next_phase == 'bayesian optimization':
-        last_relaxed_constraint = relaxed_constraint(t-1, cooling_function)
+        last_relaxed_constraint = relaxed_constraint(t - 1, relaxation_function)
     else:
-        last_relaxed_constraint = relaxed_constraint(t, cooling_function)
+        last_relaxed_constraint = relaxed_constraint(t, relaxation_function)
     re.sub('\d', str(t-1), last_finetuned_caffemodel)
 elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
@@ -77,13 +80,21 @@ else:
     last_relaxed_constraint = original_latency
 
 
+logging.info('Original latency: {}'.format(original_latency))
+logging.info('Latency constraint: {}'.format(latency_constraint))
+logging.info('Constrained fine-pruning iterations: {}'.format(fine_pruning_iterations))
+logging.info('Constrained bayesian optimization iterations: {}'.format(bo_iters))
+logging.info('Relaxation function: {}'.format(relaxation_function))
+logging.info('Exponential cooling factor: {}'.format(exp_factor))
+
+
 while t < fine_pruning_iterations:
     if t == 0:
         input_caffemodel = original_caffemodel
     else:
         input_caffemodel = last_finetuned_caffemodel
     # compute relaxed constraints
-    current_relaxed_constraint = relaxed_constraint(t, cooling_function)
+    current_relaxed_constraint = relaxed_constraint(t, relaxation_function)
 
     if next_phase is None or next_phase == 'bayesian optimization':
         logging.info('The relaxed constraint in {}th iteration is {}'.format(t, current_relaxed_constraint))
@@ -115,7 +126,6 @@ while t < fine_pruning_iterations:
         # results = read_fp_log(log_file=log_file, bo_num=t)
         max_acc = 0
         max_res = None
-        # TODO: what if there is no point sampled below the relaxed_constraint? increase the sampling point or ...?
         for res in results:
             if res.latency <= current_relaxed_constraint and res.accuracy > max_acc:
                 max_res = res

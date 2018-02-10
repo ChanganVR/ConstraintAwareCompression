@@ -188,6 +188,7 @@ if __name__ == '__main__':
     else:
         raise ValueError('Input arguments format is wrong')
     print('Number of iterations:', len(log_results))
+    print('Constraint:', constraint)
     find_max_objective(log_results)
     print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(log_results, 1, (0, 0.55))))
     range_distribution(log_results)
