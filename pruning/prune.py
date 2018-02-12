@@ -5,7 +5,7 @@ import json
 import os
 import logging
 from utils import read_log
-from visualize_pruning_results import find_best_logs
+from visualize_cfp_results import find_best_logs
 
 
 def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):

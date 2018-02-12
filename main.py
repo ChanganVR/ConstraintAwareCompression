@@ -30,10 +30,10 @@ constrained_optimization = True
 init_points = 20
 bo_iters = 100
 kappa = 10
-relaxation_function = 'linear'
-# for fine-tuning
+relaxation_function = 'exponential'
+# for fine-tuning, not need to spend a lot of time fine-tuning for a little accuracy improvement
 min_acc = 0.55
-max_iter = 20000
+max_iter = 10000
 
 # some path variables
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
@@ -83,7 +83,7 @@ else:
 
     t = 0
     next_phase = None
-    last_relaxed_constraint = original_latency
+    last_relaxed_constraint = 10000
 
 
 while t < fine_pruning_iterations:
@@ -106,6 +106,7 @@ while t < fine_pruning_iterations:
                                               last_constraint=last_relaxed_constraint,
                                               latency_constraint=current_relaxed_constraint,
                                               output_prefix=output_prefix, original_latency=original_latency)
+            last_relaxed_constraint = current_relaxed_constraint
         else:
             # allow 4 percent drop in accuracy to trade off for 140 ms speedup
             # latency tradeoff function changes according to cooling function

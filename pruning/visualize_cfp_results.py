@@ -1,23 +1,24 @@
 from __future__ import print_function
 from __future__ import division
 import sys
+import os
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from utils import calculate_alexnet_compression_rate, read_log, Log, read_fp_log
 
 
-def find_max_objective(logs):
-    max_log = logs[0]
+def find_min_objective(logs, constraint):
+    max_log = None
     max_iter = 1
-    for iter, log in enumerate(logs):
-        if log.latency_ratio < max_log.latency_ratio:
+    for i, log in enumerate(logs):
+        if log.latency < constraint and (max_log is None or log.objective_value > max_log.objective_value):
             max_log = log
-            max_iter = iter
-    print('Find max objective value in iteration', max_iter)
+            max_iter = i
+    print('Find max objective under constraint {:.2f} in iteration {}'.format(constraint, max_iter))
     print(max_log)
 
 
-def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None):
+def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None, log_dir=None):
     latencies = [log.latency for log in logs]
     accuracies = [log.accuracy for log in logs]
     if not saturation:
@@ -33,17 +34,22 @@ def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=Non
     if accuracy_range is not None:
         plt.xlim(accuracy_range)
     # plt.ylim([500, 2300])
+    if log_dir is not None:
+        fig_dir = os.path.join(log_dir, 'plots')
+        if not os.path.exists(fig_dir):
+            os.mkdir(fig_dir)
+        plt.savefig(os.path.join(fig_dir, 'accuracy_latency.png'))
     plt.show()
 
 
 def plot_accuracy_latency_ratio(logs, title=None, saturation=False):
     ratios = [log.latency_ratio for log in logs]
     accuracies = [log.accuracy for log in logs]
-    saturations = [log.sampling_time for log in logs]
+    saturation_degrees = [log.sampling_time for log in logs]
     if not saturation:
         plt.plot(accuracies, ratios, 'ro')
     else:
-        plt.scatter(accuracies, ratios, c=saturations, cmap='Reds')
+        plt.scatter(accuracies, ratios, c=saturation_degrees, cmap='Reds')
     plt.xlabel('Accuracy')
     plt.ylabel('Latency ratio(%)')
     if not title:
@@ -134,7 +140,7 @@ def plot_latency_compression_curve(logs):
     plt.show()
 
 
-def plot_uac_vs_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False):
+def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False, log_dir=None):
     iterations = []
     uacs = []
     for i, log in enumerate(logs):
@@ -151,53 +157,61 @@ def plot_uac_vs_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width
     plt.xlabel('Iterations')
     plt.ylabel('AUC')
     plt.title('AUC vs iterations with bin width {}'.format(bin_width))
+
+    if log_dir is not None:
+        fig_dir = os.path.join(log_dir, 'plots')
+        if not os.path.exists(fig_dir):
+            os.mkdir(fig_dir)
+        plt.savefig(os.path.join(fig_dir, 'uac_iteration.png'))
+
     plt.show()
 
 
-def plot_objective_time(logs, constraint=None, min_obj=True):
-    if min_obj:
-        objective_values = [0]
-        for log in logs:
-            if constraint is not None:
-                if log.objective_value < objective_values[-1] and log.latency < constraint:
-                    objective_values.append(log.objective_value)
-                else:
-                    objective_values.append(objective_values[-1])
-    else:
-        objective_values = [logs[0].objective_value]
-        for log in logs[1:]:
-            if log.objective_value > objective_values[-1]:
+def plot_objective_time(logs, constraint=None, log_dir=None):
+    objective_values = [0]
+    for log in logs:
+        if constraint is not None:
+            if log.objective_value < objective_values[-1] and log.latency < constraint:
                 objective_values.append(log.objective_value)
             else:
                 objective_values.append(objective_values[-1])
+
     iterations = list(range(len(objective_values)))
     plt.plot(iterations, objective_values)
     plt.xlabel('Iterations')
     plt.ylabel('Objective values')
     plt.title('Objective values vs iterations')
+    if log_dir is not None:
+        fig_dir = os.path.join(log_dir, 'plots')
+        if not os.path.exists(fig_dir):
+            os.mkdir(fig_dir)
+        plt.savefig(os.path.join(fig_dir, 'objective_time.png'))
     plt.show()
 
 
-if __name__ == '__main__':
+def main():
     if len(sys.argv) < 2:
         raise ValueError('Log file needs to be specified')
     elif len(sys.argv) == 2:
-        log_results, constraint = read_log(sys.argv[1])
-    elif len(sys.argv) == 3:
-        log_results = read_fp_log(sys.argv[1], int(sys.argv[2]))
+        logs, constraint = read_log(sys.argv[1])
     else:
         raise ValueError('Input arguments format is wrong')
-    print('Number of iterations:', len(log_results))
-    print('Constraint:', constraint)
-    find_max_objective(log_results)
-    print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(log_results, 1, (0, 0.55))))
-    range_distribution(log_results)
-    plot_accuracy_latency(log_results, saturation=True)
+    log_dir = os.path.dirname(sys.argv[1])
+    print('Number of iterations:', len(logs))
+    print('Current constraint:', constraint)
+    find_min_objective(logs, constraint)
+    # print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(logs, 1, (0, 0.55))))
+    # range_distribution(logs)
+    plot_accuracy_latency(logs, saturation=True, log_dir=log_dir)
     # plot_latency_compression_curve(res)
     # plot_lower_bound_curve(res)
-    plot_uac_vs_iteration(log_results, 1)
-    plot_objective_time(log_results, constraint)
+    plot_uac_iteration(logs, 1, log_dir=log_dir)
+    plot_objective_time(logs, constraint, log_dir=log_dir)
     # plot_accuracy_latency_ratio(res, saturation=True)
+
+
+if __name__ == '__main__':
+    main()
 
 # sample pruning log
 # INFO:root:=================================>>>Pruning starts<<<=================================

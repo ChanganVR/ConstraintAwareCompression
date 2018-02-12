@@ -129,11 +129,9 @@ def read_log(log_file):
         # need to have a full pruning log
         if i + 5 >= len(lines):
             break
-        if 'Bayesian optimization tradeoff factor' in line:
-            sampling_counter = 0
         if 'Original latency' in line:
             original_latency = float(line.split()[-1])
-        if 'Latency constraint' in line:
+        if 'Current latency constraint' in line:
             constraint = float(line.split()[-1])
         if 'Pruning starts' in line:
             layers = [x for x in lines[i+1].split()[3:]]

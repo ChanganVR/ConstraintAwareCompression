@@ -93,7 +93,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
 
         logging.info('Test input caffemodel latency with sparse conv:')
         test_input_latency = test_latency(sconv_prototxt, input_caffemodel, test_iters)
-        if abs(test_input_latency - last_constraint) > 10:
+        if test_input_latency - last_constraint > 10:
             logging.error('Test input latency is off from last constraint too much. Check the environment!')
             return False
 
