@@ -2,7 +2,9 @@ from __future__ import print_function
 from __future__ import division
 import sys
 import os
-import matplotlib.pyplot as plt
+import glob
+import argparse
+import matplotlib as mpl
 from collections import defaultdict
 from utils import calculate_alexnet_compression_rate, read_log, Log, read_fp_log
 
@@ -18,7 +20,7 @@ def find_min_objective(logs, constraint):
     print(max_log)
 
 
-def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None, log_dir=None):
+def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None, prefix=None):
     latencies = [log.latency for log in logs]
     accuracies = [log.accuracy for log in logs]
     if not saturation:
@@ -34,11 +36,8 @@ def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=Non
     if accuracy_range is not None:
         plt.xlim(accuracy_range)
     # plt.ylim([500, 2300])
-    if log_dir is not None:
-        fig_dir = os.path.join(log_dir, 'plots')
-        if not os.path.exists(fig_dir):
-            os.mkdir(fig_dir)
-        plt.savefig(os.path.join(fig_dir, 'accuracy_latency.png'))
+    if prefix is not None:
+        plt.savefig(prefix + '_accuracy_latency.png')
     plt.show()
 
 
@@ -140,7 +139,7 @@ def plot_latency_compression_curve(logs):
     plt.show()
 
 
-def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False, log_dir=None):
+def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.01, diff=False, prefix=None):
     iterations = []
     uacs = []
     for i, log in enumerate(logs):
@@ -158,16 +157,12 @@ def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.
     plt.ylabel('AUC')
     plt.title('AUC vs iterations with bin width {}'.format(bin_width))
 
-    if log_dir is not None:
-        fig_dir = os.path.join(log_dir, 'plots')
-        if not os.path.exists(fig_dir):
-            os.mkdir(fig_dir)
-        plt.savefig(os.path.join(fig_dir, 'uac_iteration.png'))
-
+    if prefix is not None:
+        plt.savefig(prefix + '_uac_iteration.png')
     plt.show()
 
 
-def plot_objective_time(logs, constraint=None, log_dir=None):
+def plot_objective_time(logs, constraint=None, prefix=None):
     objective_values = [0]
     for log in logs:
         if constraint is not None:
@@ -181,46 +176,45 @@ def plot_objective_time(logs, constraint=None, log_dir=None):
     plt.xlabel('Iterations')
     plt.ylabel('Objective values')
     plt.title('Objective values vs iterations')
-    if log_dir is not None:
-        fig_dir = os.path.join(log_dir, 'plots')
-        if not os.path.exists(fig_dir):
-            os.mkdir(fig_dir)
-        plt.savefig(os.path.join(fig_dir, 'objective_time.png'))
+
+    if prefix is not None:
+        plt.savefig(prefix + '_objective_time.png')
     plt.show()
 
 
-def main():
-    if len(sys.argv) < 2:
-        raise ValueError('Log file needs to be specified')
-    elif len(sys.argv) == 2:
-        logs, constraint = read_log(sys.argv[1])
+def main(file_path):
+    if os.path.isdir(file_path):
+        files = glob.glob(os.path.join(file_path, '*bo.log'))
+        log_dir = file_path
     else:
-        raise ValueError('Input arguments format is wrong')
-    log_dir = os.path.dirname(sys.argv[1])
-    print('Number of iterations:', len(logs))
-    print('Current constraint:', constraint)
-    find_min_objective(logs, constraint)
-    # print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(logs, 1, (0, 0.55))))
-    # range_distribution(logs)
-    plot_accuracy_latency(logs, saturation=True, log_dir=log_dir)
-    # plot_latency_compression_curve(res)
-    # plot_lower_bound_curve(res)
-    plot_uac_iteration(logs, 1, log_dir=log_dir)
-    plot_objective_time(logs, constraint, log_dir=log_dir)
-    # plot_accuracy_latency_ratio(res, saturation=True)
+        files = [file_path]
+        log_dir = os.path.dirname(file_path)
+    fig_dir = os.path.join(log_dir, 'plots')
+    if not os.path.exists(fig_dir):
+        os.mkdir(fig_dir)
+    for log_file in files:
+        print('\nPlot', log_file)
+        logs, constraint = read_log(log_file)
+        prefix = os.path.join(fig_dir, os.path.basename(log_file)[:-4])
+        print('Number of iterations:', len(logs))
+        print('Current constraint:', constraint)
+        find_min_objective(logs, constraint)
+        # print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(logs, 1, (0, 0.55))))
+        # range_distribution(logs)
+        plot_accuracy_latency(logs, saturation=True, prefix=prefix)
+        # plot_latency_compression_curve(res)
+        # plot_lower_bound_curve(res)
+        # plot_uac_iteration(logs, 1, prefix=prefix)
+        # plot_objective_time(logs, constraint, prefix=prefix)
+        # plot_accuracy_latency_ratio(res, saturation=True)
 
 
 if __name__ == '__main__':
-    main()
-
-# sample pruning log
-# INFO:root:=================================>>>Pruning starts<<<=================================
-# INFO:root:conv1		conv2		conv3		conv4		conv5		fc6			fc7			fc8
-# INFO:root:0.12		0.19		0.55		0.15		0.42		0.05		0.24		0.54
-# INFO:root:Pruning takes(s):              6.23
-# INFO:root:Testing latency takes(s):      9.90
-# INFO:root:Latency(ms):                   1760.99
-# INFO:root:Testing accuracy takes(s):     9.42
-# INFO:root:Accuracy:                      0.54
-# INFO:root:Total time(s):                 25.56
-# INFO:root:Objective value:               65.82
+    parser = argparse.ArgumentParser(description='Visualize cfp output logs')
+    parser.add_argument('file_path')
+    parser.add_argument('--display', action='store_true')
+    args = parser.parse_args()
+    if not args.display:
+        mpl.use('Agg')
+    from matplotlib import pyplot as plt
+    main(args.file_path)

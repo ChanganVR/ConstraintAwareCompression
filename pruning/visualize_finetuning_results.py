@@ -1,40 +1,12 @@
+from __future__ import print_function
 import numpy as np
 import re
-import click
+import argparse
 import glob, os
-from matplotlib import pylab as plt
+import matplotlib as mpl
 import operator
+import sys
 import ntpath
-
-
-@click.command()
-@click.argument('files', nargs=-1, type=click.Path(exists=True))
-def main(files):
-    plt.style.use('ggplot')
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.set_xlabel('iteration')
-    ax1.set_ylabel('loss')
-    ax2.set_ylabel('accuracy %')
-    if not files:
-        print 'no args found'
-        print '\n\rloading all files with .log extension from current directory'
-        os.chdir(".")
-        files = glob.glob("*.log")
-
-    for i, log_file in enumerate(files):
-        loss_iterations, losses, accuracy_iterations, accuracies, accuracies_iteration_checkpoints_ind, fileName = parse_log(
-            log_file)
-        disp_results(fig, ax1, ax2, loss_iterations, losses, accuracy_iterations, accuracies,
-                     accuracies_iteration_checkpoints_ind, fileName, color_ind=i)
-
-    log_dir = os.path.dirname(files[0])
-    filename = os.path.basename(files[0])
-    fig_dir = os.path.join(log_dir, 'plots')
-    if not os.path.exists(fig_dir):
-        os.mkdir(fig_dir)
-    plt.savefig(os.path.join(fig_dir, filename[:-4]+'_acc_loss_iter.png'))
-    plt.show()
 
 
 def parse_log(log_file):
@@ -78,7 +50,7 @@ def disp_results(fig, ax1, ax2, loss_iterations, losses, accuracy_iterations, ac
                  accuracies_iteration_checkpoints_ind, fileName, color_ind=0):
     modula = len(plt.rcParams['axes.color_cycle'])
     acrIterations = []
-    top_acrs = {}
+    top_accuracies = {}
     if accuracies.size:
         if accuracies.size > 4:
             top_n = 4
@@ -90,21 +62,16 @@ def disp_results(fig, ax1, ax2, loss_iterations, losses, accuracy_iterations, ac
         result = -temp[:top_n]
         for acr in result_indices:
             acrIterations.append(accuracy_iterations[acr])
-            top_acrs[str(accuracy_iterations[acr])] = str(accuracies[acr])
+            top_accuracies[str(accuracy_iterations[acr])] = str(accuracies[acr])
 
-        sorted_top4 = sorted(top_acrs.items(), key=operator.itemgetter(1))
         maxAcc = np.amax(accuracies, axis=0)
         iterIndx = np.argmax(accuracies)
         maxAccIter = accuracy_iterations[iterIndx]
-        maxIter = accuracy_iterations[-1]
-        consoleInfo = format('\n[%s]:maximum accuracy [from 0 to %s ] = [Iteration %s]: %s '
-                             % (fileName, maxIter, maxAccIter, maxAcc))
+
         plotTitle = format('max accuracy {} [Iteration {}]: {:.1f}% '.format(fileName, maxAccIter, maxAcc))
-        print (consoleInfo)
         # print (str(result))
         # print(acrIterations)
         # print 'Top 4 accuracies:'
-        print ('Top 4 accuracies:' + str(sorted_top4))
         plt.title(plotTitle)
     ax1.plot(loss_iterations, losses, color=plt.rcParams['axes.color_cycle'][(color_ind * 2 + 0) % modula])
     ax2.plot(accuracy_iterations, accuracies, plt.rcParams['axes.color_cycle'][(color_ind * 2 + 1) % modula],
@@ -115,5 +82,49 @@ def disp_results(fig, ax1, ax2, loss_iterations, losses, accuracy_iterations, ac
     plt.legend(loc='lower right')
 
 
+def main(file_path):
+    # if file_path is single file, plot that file
+    # otherwise plot all finetuned files in that folder
+    if os.path.isdir(file_path):
+        files = glob.glob(os.path.join(file_path, '*th_finetuned.log'))
+        files = sorted(files)
+        log_dir = file_path
+    else:
+        files = [file_path]
+        log_dir = os.path.dirname(file_path)
+    fig_dir = os.path.join(log_dir, 'plots')
+    if not os.path.exists(fig_dir):
+        os.mkdir(fig_dir)
+    for i, log_file in enumerate(files):
+        fig_file = os.path.basename(log_file)[:-4] + '_acc_loss.png'
+        fig_file = os.path.join(fig_dir, fig_file)
+        print('Plot file', fig_file)
+        plot(i, log_file, fig_file)
+
+
+def plot(i, log_file, fig_file):
+    plt.style.use('ggplot')
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.set_xlabel('iteration')
+    ax1.set_ylabel('loss')
+    ax2.set_ylabel('accuracy %')
+
+    loss_iterations, losses, accuracy_iterations, accuracies, accuracies_iteration_checkpoints_ind, filename = parse_log(
+        log_file)
+    disp_results(fig, ax1, ax2, loss_iterations, losses, accuracy_iterations, accuracies,
+                 accuracies_iteration_checkpoints_ind, filename, color_ind=i)
+
+    plt.savefig(fig_file)
+    plt.show()
+
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Visualize cfp output folder')
+    parser.add_argument('file_path')
+    parser.add_argument('--display', action='store_true')
+    args = parser.parse_args()
+    if not args.display:
+        mpl.use('Agg')
+    from matplotlib import pylab as plt
+    main(args.file_path)

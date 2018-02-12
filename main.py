@@ -52,7 +52,8 @@ def relaxed_constraint(iteration, relaxation_func):
     elif relaxation_func == 'exponential':
         # using Newton's Law of Cooling
         # plot: 80+(238-80)*exp(-0.5x)+(80-238)*exp(-2.5) from 1 to 5
-        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1 * exp_factor * (iteration + 1)) + (latency_constraint - original_latency) * math.exp(-1 * exp_factor * (fine_pruning_iterations + 1))
+        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1 * exp_factor * (iteration + 1)) \
+               + (latency_constraint - original_latency) * math.exp(-1 * exp_factor * fine_pruning_iterations)
     elif relaxation_func == 'one-step':
         return latency_constraint
     else:

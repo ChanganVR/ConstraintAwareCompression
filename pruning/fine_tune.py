@@ -11,6 +11,22 @@ caffe.set_device(0)
 caffe.set_mode_gpu()
 
 
+def test_accuracy(iter_cnt, solver, test_iters, output_caffemodel):
+    solver.test_nets[0].share_with(solver.net)
+    accuracy = 0
+    loss = 0
+    for i in range(test_iters):
+        solver.test_nets[0].forward()
+        accuracy += solver.test_nets[0].blobs['accuracy'].data
+        loss += solver.test_nets[0].blobs['loss'].data
+    accuracy /= test_iters
+    loss /= test_iters
+    logging.info('Test in iteration {}, accuracy: {:.3f}, loss: {:.2f}'.format(iter_cnt, accuracy, loss))
+    solver.net.save(output_caffemodel)
+    logging.info('Model saved in {}'.format(output_caffemodel))
+    return accuracy
+
+
 def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_iter, log_file=None):
     """
     fine-tune until one of two requirements are satisfied: acc > min_acc or iter > max_iter
@@ -44,21 +60,6 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     logging.info('{:<20} {}'.format('Min accuracy:', min_acc))
     logging.info('{:<20} {}'.format('Max iterations:', max_iter))
 
-    # solver_config = caffe.SolverParameter()
-    # solver_config.train_net = 'models/bvlc_reference_caffenet/train_val_ft.prototxt'
-    # solver_config.base_lr = 0.001
-    # solver_config.momentum = 0.9
-    # solver_config.weight_decay = 0.00005
-    # solver_config.lr_policy = 'step'
-    # solver_config.gamma = 0.01
-    # solver_config.step = 1000
-    # solver_config.max_iter = 100000
-    # solver_config.snapshot = 2000
-    # solver_config.snapshot_prefix = output_caffemodel
-    # solver_config.type = 'sgd'
-    # solver_config.display = 1
-    # solver_config.regularization_type = 'L1'
-
     solver = caffe.get_solver(solver_file)
     if not os.path.exists(output_caffemodel):
         solver.net.copy_from(input_caffemodel)
@@ -66,36 +67,24 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     else:
         solver.net.copy_from(output_caffemodel)
         logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
-    iter = 0
-    while iter < max_iter:
+    iter_cnt = 0
+    while iter_cnt < max_iter:
         # test
-        if iter % test_interval == 0:
+        if iter_cnt % test_interval == 0:
             # switch net to test mode
-            solver.test_nets[0].share_with(solver.net)
-            accuracy = 0
-            loss = 0
-            for i in range(test_iters):
-                solver.test_nets[0].forward()
-                accuracy += solver.test_nets[0].blobs['accuracy'].data
-                loss += solver.test_nets[0].blobs['loss'].data
-            accuracy /= test_iters
-            loss /= test_iters
-            logging.info('Test in iteration {}, accuracy: {:.3f}, loss: {:.2f}'.format(iter, accuracy, loss))
-            if accuracy >= min_acc:
+            acc = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+            if acc >= min_acc:
                 break
-            solver.net.save(output_caffemodel)
-            logging.info('Model saved in {}'.format(output_caffemodel))
 
         # fine-tune
         solver.step(1)
         loss = solver.net.blobs['loss'].data
-        if iter % disp_interval == 0 or iter + 1 == max_iter:
-            logging.info('Training iteration {}, loss: {:.2f}'.format(iter, loss))
-        iter += 1
+        if iter_cnt % disp_interval == 0 or iter_cnt + 1 == max_iter:
+            logging.info('Training iteration {}, loss: {:.2f}'.format(iter_cnt, loss))
+        iter_cnt += 1
 
-    # save learned weights
-    solver.net.save(output_caffemodel)
-    logging.info('Model saved in {}'.format(output_caffemodel))
+    # test final accuracy
+    test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
     logging.info('Fine-tuning ends')
     output_file.close()
 
