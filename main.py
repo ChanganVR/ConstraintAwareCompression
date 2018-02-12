@@ -6,44 +6,11 @@ import time
 import json
 import sys
 import math
-import re
+import ConfigParser
+from shutil import copyfile
 from pruning.objective_functions import alexnet_objective_function
 from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
 from pruning.utils import find_next_phase, read_log
-
-if len(sys.argv) == 1:
-    resume_training = False
-elif sys.argv[1] == 'resume':
-    resume_training = True
-else:
-    raise ValueError('Command line argument incorrect')
-
-# hyper parameters
-num_threads = 4
-batch_size = 32
-original_latency = 238
-latency_constraint = 80
-fine_pruning_iterations = 5
-exp_factor = 0.5
-# for bayesian optimization
-constrained_optimization = True
-init_points = 20
-bo_iters = 100
-kappa = 10
-relaxation_function = 'exponential'
-# for fine-tuning, not need to spend a lot of time fine-tuning for a little accuracy improvement
-min_acc = 0.55
-max_iter = 10000
-
-# some path variables
-original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
-original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-finetune_solver = 'models/bvlc_reference_caffenet/finetune_solver.prototxt'
-output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
-                                                               exp_factor, relaxation_function)
-best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
-last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
-log_file = os.path.join(output_folder, 'fine_pruning.log')
 
 
 def relaxed_constraint(iteration, relaxation_func):
@@ -58,6 +25,56 @@ def relaxed_constraint(iteration, relaxation_func):
         return latency_constraint
     else:
         raise NotImplementedError
+
+
+if len(sys.argv) == 1:
+    resume_training = False
+elif sys.argv[1] == 'resume':
+    resume_training = True
+else:
+    raise ValueError('Command line argument incorrect')
+
+config_file = 'cfp.config'
+config = ConfigParser.RawConfigParser()
+config.read(config_file)
+
+# fixed hyper parameters
+num_threads = 4
+batch_size = 32
+original_latency = 238
+init_points = 20
+kappa = 10
+constrained_optimization = True
+
+# input parameter
+latency_constraint = config.getfloat('input', 'latency_constraint')
+
+# constrained bayesian optimization
+fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
+exp_factor = config.getfloat('cbo', 'exp_factor')
+bo_iters = config.getint('cbo', 'bo_iters')
+relaxation_function = config.get('cbo', 'relaxation_function')
+
+# fine-tuning
+min_acc = config.getfloat('fine-tuning', 'min_acc')
+max_iter = config.getint('fine-tuning', 'max_iter')
+learning_rate = config.getfloat('fine-tuning', 'learning_rate')
+gamma = config.getfloat('fine-tuning', 'gamma')
+stepsize = config.getint('fine-tuning', 'stepsize')
+regularization = config.get('fine-tuning', 'regularization')
+weight_decay = config.getfloat('fine-tuning', 'weight_decay')
+
+# some path variables
+original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
+output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
+                                                               exp_factor, relaxation_function)
+finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
+best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
+last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
+log_file = os.path.join(output_folder, 'fine_pruning.log')
+
 
 if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
@@ -86,6 +103,23 @@ else:
     next_phase = None
     last_relaxed_constraint = 10000
 
+    # copy current config file and create new solver
+    copyfile(config_file, os.path.join(output_folder, os.path.basename(config_file)))
+    with open(finetune_solver, 'w') as fo:
+        fo.write('net: "{}"\n'.format(net))
+        fo.write('test_iter: {}\n'.format(100))
+        fo.write('test_interval: {}\n'.format(10000))
+        fo.write('base_lr: {}\n'.format(learning_rate))
+        fo.write('gamma: {}\n'.format(gamma))
+        fo.write('lr_policy: "{}"\n'.format('step'))
+        fo.write('stepsize: {}\n'.format(stepsize))
+        fo.write('display: {}\n'.format(200))
+        fo.write('max_iter: {}\n'.format(max_iter))
+        fo.write('momentum: {}\n'.format(0.9))
+        if regularization == 'L1':
+            fo.write('regularization_type: {}\n'.format(regularization))
+            fo.write('weight_decay: {}\n'.format(weight_decay))
+        fo.write('solver_mode: {}\n'.format('GPU'))
 
 while t < fine_pruning_iterations:
     if t == 0:
