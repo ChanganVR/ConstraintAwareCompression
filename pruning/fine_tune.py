@@ -73,6 +73,8 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
         if iter_cnt % test_interval == 0:
             # switch net to test mode
             acc = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+            if iter_cnt == 0:
+                accuracy_before = acc
             if acc >= min_acc:
                 break
 
@@ -84,7 +86,10 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
         iter_cnt += 1
 
     # test final accuracy
-    test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+    accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+    logging.info('Accuracy before: {:.2f}'.format(accuracy_before))
+    logging.info('Accuracy after: {:.2f}'.format(accuracy_after))
+    logging.info('Total iterations: {}'.format(iter_cnt))
     logging.info('Fine-tuning ends')
     output_file.close()
 

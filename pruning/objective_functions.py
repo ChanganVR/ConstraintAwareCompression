@@ -29,8 +29,8 @@ def matlab_alexnet_objective_function(input_caffemodel, last_constraint, latency
         reload(logging)
         logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-        logging.info('Last latency constraint: {}'.format(last_constraint))
-        logging.info('Current latency constraint: {}'.format(latency_constraint))
+        logging.info('Last latency constraint: {:.2f}'.format(last_constraint))
+        logging.info('Current latency constraint: {:.2f}'.format(latency_constraint))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
         objective_function.log_file = log_file
         while not test_env(original_latency, input_caffemodel, last_constraint):

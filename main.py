@@ -130,7 +130,7 @@ while t < fine_pruning_iterations:
     current_relaxed_constraint = relaxed_constraint(t, relaxation_function)
 
     if next_phase is None or next_phase == 'bayesian optimization':
-        logging.info('The relaxed constraint in {}th iteration is {}'.format(t, current_relaxed_constraint))
+        logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_relaxed_constraint))
         logging.info('Start {}th fine-pruning iteration'.format(t))
         # first do bayesian optimization given latency tradeoff factor
         start = time.time()
@@ -194,6 +194,12 @@ while t < fine_pruning_iterations:
         logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):
             logging.error('Cannot find the finetuned caffemodel')
+        # find acc/iter information in fine-tuning
+#        loss_pattern = r"Training iteration (?P<iter_num>\d+), loss: (?P<loss_val>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)"
+#        acc_before =  re.findall(loss_pattern, finetuning_logfile)
+#            loss_iterations.append(int(r[0]))
+#            losses.append(float(r[1]))
+#
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
