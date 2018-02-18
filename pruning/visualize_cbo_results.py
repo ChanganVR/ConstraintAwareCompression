@@ -20,21 +20,25 @@ def find_min_objective(logs, constraint):
     print(max_log)
 
 
-def plot_accuracy_latency(logs, title=None, saturation=False, accuracy_range=None, prefix=None):
+def plot_accuracy_latency(logs, constraint, title=None, saturation=False, accuracy_range=None, prefix=None):
+    fig, ax = plt.subplots()
     latencies = [log.latency for log in logs]
     accuracies = [log.accuracy for log in logs]
+    hline = ax.hlines(constraint, xmin=0, xmax=max(accuracies), linestyles='dashed', colors='blue')
+    hline.set_label('Current constraint: {:.0f}'.format(int(constraint)))
+    ax.legend()
     if not saturation:
-        plt.plot(accuracies, latencies, 'ro')
+        ax.plot(accuracies, latencies, 'ro')
     else:
-        plt.scatter(accuracies, latencies, c=list(range(len(latencies))), cmap='Reds')
-    plt.xlabel('Accuracy')
-    plt.ylabel('Latency(ms)')
+        ax.scatter(accuracies, latencies, c=list(range(len(latencies))), cmap='Reds')
+    ax.set_xlabel('Accuracy')
+    ax.set_ylabel('Latency(ms)')
     if not title:
-        plt.title('Latency vs Accuracy')
+        ax.set_title('Latency vs Accuracy')
     else:
-        plt.title(title)
+        ax.set_title(title)
     if accuracy_range is not None:
-        plt.xlim(accuracy_range)
+        ax.set_xlim(accuracy_range)
     # plt.ylim([500, 2300])
     if prefix is not None:
         plt.savefig(prefix + '_accuracy_latency.png')
@@ -163,6 +167,7 @@ def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.
 
 
 def plot_objective_time(logs, constraint=None, prefix=None):
+    fig, ax = plt.subplots()
     objective_values = [0]
     for log in logs:
         if constraint is not None:
@@ -172,10 +177,10 @@ def plot_objective_time(logs, constraint=None, prefix=None):
                 objective_values.append(objective_values[-1])
 
     iterations = list(range(len(objective_values)))
-    plt.plot(iterations, objective_values)
-    plt.xlabel('Iterations')
-    plt.ylabel('Objective values')
-    plt.title('Objective values vs iterations')
+    ax.plot(iterations, objective_values)
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Objective values')
+    ax.set_title('Objective values vs iterations')
 
     if prefix is not None:
         plt.savefig(prefix + '_objective_time.png')
@@ -184,7 +189,7 @@ def plot_objective_time(logs, constraint=None, prefix=None):
 
 def main(file_path):
     if os.path.isdir(file_path):
-        files = glob.glob(os.path.join(file_path, '*bo.log'))
+        files = sorted(glob.glob(os.path.join(file_path, '*bo.log')))
         log_dir = file_path
     else:
         files = [file_path]
@@ -201,11 +206,11 @@ def main(file_path):
         find_min_objective(logs, constraint)
         # print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(logs, 1, (0, 0.55))))
         # range_distribution(logs)
-        plot_accuracy_latency(logs, saturation=True, prefix=prefix)
+        plot_accuracy_latency(logs, constraint, saturation=True, prefix=prefix)
         # plot_latency_compression_curve(res)
         # plot_lower_bound_curve(res)
         # plot_uac_iteration(logs, 1, prefix=prefix)
-        # plot_objective_time(logs, constraint, prefix=prefix)
+        plot_objective_time(logs, constraint, prefix=prefix)
         # plot_accuracy_latency_ratio(res, saturation=True)
 
 

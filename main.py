@@ -5,6 +5,7 @@ import os
 import time
 import json
 import sys
+import re
 import math
 import ConfigParser
 from shutil import copyfile
@@ -153,7 +154,7 @@ while t < fine_pruning_iterations:
             objective_function.input_caffemodel = input_caffemodel
             bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
                                   objective_function=objective_function, init_points=init_points, kappa=kappa)
-        logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
+        logging.debug('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
     if next_phase is None or next_phase == 'pruning':
@@ -194,12 +195,16 @@ while t < fine_pruning_iterations:
         logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):
             logging.error('Cannot find the finetuned caffemodel')
+
         # find acc/iter information in fine-tuning
-#        loss_pattern = r"Training iteration (?P<iter_num>\d+), loss: (?P<loss_val>[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)"
-#        acc_before =  re.findall(loss_pattern, finetuning_logfile)
-#            loss_iterations.append(int(r[0]))
-#            losses.append(float(r[1]))
-#
+        with open(finetuning_logfile) as fo:
+            log = fo.read()
+        acc_before = re.findall(r"Accuracy before: (0\.\d+)", log)[0]
+        acc_after = re.findall(r"Accuracy after: (0\.\d+)", log)[0]
+        total_iterations = re.findall(r"Total iterations: (\d+)")[0]
+        logging.info('Accuracy before: {}'.format(acc_after))
+        logging.info('Accuracy after: {}'.format(acc_after))
+        logging.info('Number of iterations: {}'.format(total_iterations))
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
