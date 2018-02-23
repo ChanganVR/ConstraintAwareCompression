@@ -5,6 +5,8 @@ import os
 import logging
 import sys
 import json
+import re
+from matplotlib import pyplot as plt
 
 
 class Log(object):
@@ -41,53 +43,6 @@ class Log(object):
     @staticmethod
     def get_ratio(log):
         return log.latency_ratio
-
-
-def read_fp_log(log_file, bo_num=None):
-    # read log file for fine-pruning procedure
-    logs = []
-    with open(log_file) as fo:
-        lines = [line.strip() for line in fo.readlines()]
-    if len(lines) == 0:
-        raise IOError('Can not read log file')
-
-    # read original latency from the beginning of the file
-    original_latency = [float(line.split()[-1]) for line in lines[:10] if 'Original latency' in line][0]
-
-    # find out logs belonging to {bo_num}th bayesian optimization
-    if bo_num is not None:
-        start_pattern = 'Start {}th fine-pruning iteration'.format(bo_num)
-        end_pattern = 'Start {}th fine-pruning iteration'.format(bo_num+1)
-        boundaries = [i for i, line in enumerate(lines) if start_pattern in line or end_pattern in line]
-        if len(boundaries) == 1:
-            lines = lines[boundaries[0]:]
-        elif len(boundaries) == 2:
-            lines = lines[boundaries[0]: boundaries[1]]
-        else:
-            raise RuntimeError('Fail to find {}th fine-pruning iteration log'.format(bo_num))
-
-    sampling_counter = 0
-    for i, line in enumerate(lines):
-        # need to have a full pruning los
-        if i + 9 >= len(lines):
-            break
-        if 'Pruning starts' in line:
-            layers = [x for x in lines[i+1][10:].split()]
-            pruning_percentages = [float(x) for x in lines[i+2][10:].split()]
-            pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
-            pruning_time = float(lines[i+3].split()[-1])
-            testing_latency_time = float(lines[i+4].split()[-1])
-            latency = float(lines[i+5].split()[-1])
-            testing_accuracy_time = float(lines[i+6].split()[-1])
-            accuracy = float(lines[i+7].split()[-1])
-            total_time = float(lines[i+8].split()[-1])
-            objective_value = float(lines[i+9].split()[-1])
-            log = Log(pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                         accuracy, total_time, objective_value, latency / original_latency, sampling_counter)
-            sampling_counter += 1
-            logs.append(log)
-
-    return logs
 
 
 def find_next_phase(log_file):
@@ -184,32 +139,28 @@ def calculate_alexnet_compression_rate(pruning_dict):
     return 1 - pruned_weights / total_weights
 
 
-def create_different_sparsity(log_file, compression_levels):
-    # find closest pruning parameters as compression levels
-    logs = read_log(log_file)
-    compression_dict = {level: None for level in compression_levels}
-    for log in logs:
-        compression_rate = calculate_alexnet_compression_rate(log.pruning_dict)
-        for level, closest_value in compression_dict.items():
-            if closest_value is None or abs(level - compression_rate) < abs(level - closest_value[1]):
-                compression_dict[level] = (log, compression_rate)
+def plot_val_acc_in_bo_iters(log_file):
+    with open(log_file) as log:
+        text = log.read()
+        res = re.findall(r"In bo_iter (\d+), best result has train acc (0\.\d+) and val acc (0\.\d+)", text)
+        sampling_time = []
+        train_acc = []
+        val_acc = []
+        for r in res:
+            sampling_time.append(r[0])
+            train_acc.append(r[1])
+            val_acc.append(r[2])
+        print(sampling_time, train_acc, val_acc)
 
-    # create pruning model
-    pruning_dict_file = 'results/pruning_dict.txt'
-    original_prototxt_file = 'models/bvlc_reference_caffenet/train_val.prototxt'
-    caffemodel_file = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-    for level, (log, rate) in compression_dict.items():
-        temp_caffemodel_file = 'results/alexnet_density_{}.caffemodel'.format(level)
-        with open(pruning_dict_file, 'w') as fo:
-            json.dump(log.pruning_dict, fo)
-        command = ['python', 'pruning/prune.py', caffemodel_file, original_prototxt_file,
-                   temp_caffemodel_file, pruning_dict_file]
-        os.system(' '.join(command))
+    plt.scatter(sampling_time, train_acc)
+    plt.legend('Train accuracy')
+    plt.scatter(sampling_time, val_acc)
+    plt.legend('Validation accuracy')
+    plt.xlabel('Accuracy')
+    plt.ylabel('Latency ratio(%)')
+    plt.title('Validation acc vs train acc in bo iterations')
+    plt.show()
 
 
 if __name__ == '__main__':
-    # caffemodel = sys.argv[1]
-    # prototxt = sys.argv[2]
-    # print(calculate_compression_rate(caffemodel, prototxt))
-
-    find_next_phase('results/fp_5_40_linear/fine_pruning.log')
+    plot_val_acc_in_bo_iters(sys.argv[1])

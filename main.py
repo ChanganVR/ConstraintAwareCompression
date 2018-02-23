@@ -30,12 +30,16 @@ def relaxed_constraint(iteration, relaxation_func):
 
 if len(sys.argv) == 1:
     resume_training = False
-elif sys.argv[1] == 'resume':
+elif len(sys.argv) == 3 and sys.argv[1] == 'resume':
     resume_training = True
+    resume_folder = sys.argv[2]
 else:
     raise ValueError('Command line argument incorrect')
 
-config_file = 'cfp.config'
+if resume_training:
+    config_file = os.path.join(resume_folder, 'cfp.config')
+else:
+    config_file = 'cfp.config'
 config = ConfigParser.RawConfigParser()
 config.read(config_file)
 
@@ -69,8 +73,11 @@ weight_decay = config.getfloat('fine-tuning', 'weight_decay')
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
 original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
-output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
-                                                               exp_factor, relaxation_function)
+if resume_training:
+    output_folder = resume_folder
+else:
+    output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
+                                                                   exp_factor, relaxation_function)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -91,7 +98,7 @@ elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:
     os.mkdir(output_folder)
-    logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
+    logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     logging.info('{:<40} {}'.format('Original latency:', original_latency))
     logging.info('{:<40} {}'.format('Latency constraint:', latency_constraint))
@@ -154,7 +161,7 @@ while t < fine_pruning_iterations:
             objective_function.input_caffemodel = input_caffemodel
             bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
                                   objective_function=objective_function, init_points=init_points, kappa=kappa)
-        logging.debug('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
+        logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
     if next_phase is None or next_phase == 'pruning':
@@ -201,8 +208,8 @@ while t < fine_pruning_iterations:
             log = fo.read()
         acc_before = re.findall(r"Accuracy before: (0\.\d+)", log)[0]
         acc_after = re.findall(r"Accuracy after: (0\.\d+)", log)[0]
-        total_iterations = re.findall(r"Total iterations: (\d+)")[0]
-        logging.info('Accuracy before: {}'.format(acc_after))
+        total_iterations = re.findall(r"Total iterations: (\d+)", log)[0]
+        logging.info('Accuracy before: {}'.format(acc_before))
         logging.info('Accuracy after: {}'.format(acc_after))
         logging.info('Number of iterations: {}'.format(total_iterations))
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))

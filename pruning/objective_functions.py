@@ -2,9 +2,11 @@ from __future__ import print_function
 from __future__ import division
 import time
 import os
+import sys
 import logging
 import json
 import time
+from utils import read_log
 
 # prune the network according to the parameters
 original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
@@ -101,11 +103,11 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         return True
 
 
-def test_accuracy(prototxt_file, temp_caffemodel_file):
+def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=50):
     start = time.time()
     output_file = 'results/test_accuracy.txt'
-    command = ['build/tools/caffe.bin', 'test', '-gpu', '0', '-model', prototxt_file, '-weights', temp_caffemodel_file,
-               '>'+output_file, '2>&1']
+    command = ['build/tools/caffe.bin', 'test', '-gpu', '0', '-model', prototxt_file,
+               '-weights', temp_caffemodel_file, '-iterations', str(iterations), '>'+output_file, '2>&1']
     logging.debug(' '.join(command))
     os.system(' '.join(command))
 
@@ -173,23 +175,30 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_dict):
         logging.error('Fail to prune the caffemodel')
 
 
-if __name__ == '__main__':
-    os.chdir('/local-scratch/changan-home/SkimCaffe')
-    logging.basicConfig(filename='results/objective_function_debug.log', filemode='w', level=logging.DEBUG,
+def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=25):
+    logging.basicConfig(filename='results/test_val_acc_in_bo_iters.log', filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-    # eng = matlab.engine.start_matlab()
-    # no pruning, basically copy caffemodel
-    # loss = alexnet_objective_function(conv1=0, conv2=0, conv3=0, conv4=0, conv5=0, fc6=0, fc7=0, fc8=0)
+    logs, constraint = read_log(log_file)
+    best_acc = 0
+    best_logs = []
+    for log in logs:
+        if log.accuracy > best_acc and log.latency < constraint:
+            best_logs.append(log)
+            best_acc = log.accuracy
 
-    # if len(sys.argv) != 4:
-    #     raise ValueError('Input argument incorrect')
-    # input_caffemodel = sys.argv[1]
-    # latency_constraint = float(sys.argv[2])
-    # pruning_file = sys.argv[3]
-    #
-    # with open(pruning_file) as fo:
-    #     pruning_dict = json.load(fo)
-    #
-    # objective_func = matlab_alexnet_objective_function(input_caffemodel=input_caffemodel, latency_constraint=latency_constraint)
-    # objective, satisfied = objective_func(**pruning_dict)
-    # print(objective, satisfied)
+    iter_dict = {}
+    last_sampling_time = -25
+    for log in best_logs:
+        if log.sampling_time > last_sampling_time + interval:
+            prune(input_caffemodel, original_prototxt, temp_caffemodel, log.pruning_dict)
+            # test accuracy with validation set
+            val_acc = test_accuracy(original_prototxt, temp_caffemodel, iterations=1000)
+            train_acc = log.accuracy
+            iter_dict[log.sampling_time] = [train_acc, val_acc]
+            logging.info('In bo_iter {}, best result has train acc {} and val acc {:.2f}'.
+                         format(log.sampling_time, train_acc, val_acc))
+            last_sampling_time = log.sampling_time
+
+
+if __name__ == '__main__':
+    test_val_acc_in_bo_iters(sys.argv[1], sys.argv[2])

@@ -6,18 +6,18 @@ import glob
 import argparse
 import matplotlib as mpl
 from collections import defaultdict
-from utils import calculate_alexnet_compression_rate, read_log, Log, read_fp_log
+from utils import calculate_alexnet_compression_rate, read_log, Log
 
 
 def find_min_objective(logs, constraint):
-    max_log = None
-    max_iter = 1
+    min_log = None
+    min_iter = 1
     for i, log in enumerate(logs):
-        if log.latency < constraint and (max_log is None or log.objective_value > max_log.objective_value):
-            max_log = log
-            max_iter = i
-    print('Find max objective under constraint {:.2f} in iteration {}'.format(constraint, max_iter))
-    print(max_log)
+        if log.latency < constraint and (min_log is None or log.objective_value < min_log.objective_value):
+            min_log = log
+            min_iter = i
+    print('Find min objective under constraint {:.2f} in iteration {}'.format(constraint, min_iter))
+    print(min_log)
 
 
 def plot_accuracy_latency(logs, constraint, title=None, saturation=False, accuracy_range=None, prefix=None):

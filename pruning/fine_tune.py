@@ -47,7 +47,8 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     if log_file is None:
         log_file = 'results/finetuning.log'
     if os.path.exists(output_caffemodel):
-        output_file = open(log_file, 'a+')
+        # output_file = open(log_file, 'a+')
+        raise ValueError('Fine-tuned caffemodel already exists')
     else:
         output_file = open(log_file, 'w')
     sys.stdout = output_file
@@ -87,8 +88,8 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
 
     # test final accuracy
     accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
-    logging.info('Accuracy before: {:.2f}'.format(accuracy_before))
-    logging.info('Accuracy after: {:.2f}'.format(accuracy_after))
+    logging.info('Accuracy before: {:.3f}'.format(accuracy_before))
+    logging.info('Accuracy after: {:.3f}'.format(accuracy_after))
     logging.info('Total iterations: {}'.format(iter_cnt))
     logging.info('Fine-tuning ends')
     output_file.close()
