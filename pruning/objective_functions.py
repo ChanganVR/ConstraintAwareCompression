@@ -150,7 +150,7 @@ def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=50):
     if accuracy == -1:
         logging.warning('Fail to read test_accuracy.txt')
     logging.debug('{:<30} {:.2f}'.format('Testing accuracy takes(s):', time.time() - start))
-    logging.info('{:<30} {:.2f}'.format('Accuracy:', accuracy))
+    logging.info('{:<30} {:.4f}'.format('Accuracy:', accuracy))
     return accuracy
 
 

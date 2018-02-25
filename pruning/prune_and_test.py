@@ -9,10 +9,9 @@ import caffe
 caffe.set_device(0)
 caffe.set_mode_gpu()
 
-test_iters = 3
-
 
 def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
+    test_iters = 50
     # read and prune caffemodel weights
     net = caffe.Net(prototxt, input_caffemodel, caffe.TEST)
     total_params = 0
@@ -37,7 +36,7 @@ def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
         accuracy = -1
     else:
         accuracy = 0
-        for i in range(50):
+        for i in range(test_iters):
             net.forward()
             accuracy += net.blobs['accuracy'].data
         accuracy /= test_iters

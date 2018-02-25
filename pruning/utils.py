@@ -1,17 +1,18 @@
-from __future__ import print_function
 from __future__ import division
-import numpy as np
-import os
+from __future__ import print_function
+
 import logging
-import sys
-import json
+import os
 import re
+import sys
+
+import numpy as np
 from matplotlib import pyplot as plt
 
 
 class Log(object):
     def __init__(self, pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                 compression_rate, accuracy, total_time, objective_value, speedup, time):
+                 compression_rate, accuracy, total_time, objective_value, speedup, sampled_iter):
         self.pruning_dict = pruning_dict
         self.pruning_time = pruning_time
         self.testing_latency_time = testing_latency_time
@@ -23,7 +24,7 @@ class Log(object):
         self.objective_value = objective_value
         # sparse / original conv
         self.latency_ratio = speedup
-        self.sampling_time = time
+        self.sampled_iteration = sampled_iter
 
     def __str__(self):
         layers = [layer for layer, _ in sorted(self.pruning_dict.items())]
@@ -35,7 +36,7 @@ class Log(object):
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
         string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
         string += "{:<20} {:.2f}".format('Latency ratio:', self.latency_ratio) + '\n'
-        string += "{:<20} {:.2f}".format('Sampling time:', self.sampling_time)
+        string += "{:<20} {:.2f}".format('Sampled iteration:', self.sampled_iteration)
         return string
 
     @staticmethod
@@ -152,17 +153,17 @@ def plot_val_acc_in_bo_iters(log_file):
     with open(log_file) as log:
         text = log.read()
         res = re.findall(r"In bo_iter (\d+), best result has train acc (0\.\d+) and val acc (0\.\d+)", text)
-        sampling_time = []
+        sampled_iter = []
         train_acc = []
         val_acc = []
         for r in res:
-            sampling_time.append(float(r[0]))
+            sampled_iter.append(float(r[0]))
             train_acc.append(float(r[1]))
             val_acc.append(float(r[2]))
-        print(sampling_time, train_acc, val_acc)
+        print(sampled_iter, train_acc, val_acc)
 
-    plt.scatter(sampling_time, train_acc)
-    plt.scatter(sampling_time, val_acc)
+    plt.scatter(sampled_iter, train_acc)
+    plt.scatter(sampled_iter, val_acc)
     plt.legend(['Train', 'Validation'])
     plt.xlabel('Bayesian optimization iterations')
     plt.ylabel('Accuracy')
