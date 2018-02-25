@@ -8,15 +8,14 @@ from utils import read_log
 from visualize_cbo_results import find_best_logs
 
 
-def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage_dict):
+def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_dict):
+    # logging.basicConfig(filename='results/prune_debug.log', filemode='w', level=logging.DEBUG)
     # surpress log output from caffe loading
     os.environ['GLOG_minloglevel'] = '2'
     import caffe
-    # logging.basicConfig(filename='prune_debug.log', filemode='w', level=logging.DEBUG)
-    # read caffemodel weights
     net = caffe.Net(prototxt_file, input_caffemodel, caffe.TEST)
     for layer in net.params:
-        pruning_percentage = pruning_percentage_dict[layer]
+        pruning_percentage = pruning_dict[layer]
 
         # find the absolute threshold with percentile lower than pruning_percentage
         weights = net.params[layer][0].data

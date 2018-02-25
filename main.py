@@ -8,22 +8,21 @@ import sys
 import re
 import math
 import ConfigParser
+import matlab.engine
 from shutil import copyfile
-from pruning.objective_functions import alexnet_objective_function
-from pruning.bayesian_optimization import bayesian_optimization, constrained_bayesian_optimization
 from pruning.utils import find_next_phase, read_log
 
 
 def relaxed_constraint(iteration, relaxation_func):
     if relaxation_func == 'linear':
-        return original_latency + (iteration+1)/fine_pruning_iterations * (latency_constraint - original_latency)
+        return original_latency + (iteration+1)/fine_pruning_iterations * (constraint - original_latency)
     elif relaxation_func == 'exponential':
         # using Newton's Law of Cooling
         # plot: 80+(238-80)*exp(-0.5x)+(80-238)*exp(-2.5) from 1 to 5
-        return latency_constraint + (original_latency - latency_constraint) * math.exp(-1 * exp_factor * (iteration + 1)) \
-               + (latency_constraint - original_latency) * math.exp(-1 * exp_factor * fine_pruning_iterations)
+        return constraint + (original_latency - constraint) * math.exp(-1 * exp_factor * (iteration + 1)) \
+               + (constraint - original_latency) * math.exp(-1 * exp_factor * fine_pruning_iterations)
     elif relaxation_func == 'one-step':
-        return latency_constraint
+        return constraint
     else:
         raise NotImplementedError
 
@@ -46,13 +45,14 @@ config.read(config_file)
 # fixed hyper parameters
 num_threads = 4
 batch_size = 32
-original_latency = 238
+original_latency = 208
 init_points = 20
 kappa = 10
 constrained_optimization = True
 
 # input parameter
-latency_constraint = config.getfloat('input', 'latency_constraint')
+constraint_type = config.get('input', 'constraint_type')
+constraint = config.getfloat('input', 'constraint')
 
 # constrained bayesian optimization
 fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
@@ -77,11 +77,11 @@ if resume_training:
     output_folder = resume_folder
 else:
     if relaxation_function != 'exponential':
-        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
-                                                                relaxation_function)
+        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                    relaxation_function)
     else:
-        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}_exp_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
-                                                                relaxation_function, exp_factor)
+        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}_exp_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                           relaxation_function, exp_factor)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -94,9 +94,9 @@ if resume_training:
     t, next_phase = find_next_phase(log_file)
     logging.info('Resume training: current fine-pruning iteration is {}, next phase is {}'.format(t, next_phase))
     if next_phase == 'bayesian optimization':
-        last_relaxed_constraint = relaxed_constraint(t - 1, relaxation_function)
+        last_constraint = relaxed_constraint(t - 1, relaxation_function)
     else:
-        last_relaxed_constraint = relaxed_constraint(t, relaxation_function)
+        last_constraint = relaxed_constraint(t, relaxation_function)
     last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t-1))
 elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
@@ -104,16 +104,16 @@ else:
     os.mkdir(output_folder)
     logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-    logging.info('{:<40} {}'.format('Original latency:', original_latency))
-    logging.info('{:<40} {}'.format('Latency constraint:', latency_constraint))
-    logging.info('{:<40} {}'.format('Constrained fine-pruning iterations:', fine_pruning_iterations))
-    logging.info('{:<40} {}'.format('Bayesian optimization iterations:', bo_iters))
-    logging.info('{:<40} {}'.format('Relaxation function:', relaxation_function))
-    logging.info('{:<40} {}'.format('Exponential cooling factor:', exp_factor))
+    # logging.info('{:<40} {}'.format('Original latency:', original_latency))
+    # logging.info('{:<40} {}'.format('Latency constraint:', latency_constraint))
+    # logging.info('{:<40} {}'.format('Constrained fine-pruning iterations:', fine_pruning_iterations))
+    # logging.info('{:<40} {}'.format('Bayesian optimization iterations:', bo_iters))
+    # logging.info('{:<40} {}'.format('Relaxation function:', relaxation_function))
+    # logging.info('{:<40} {}'.format('Exponential cooling factor:', exp_factor))
 
     t = 0
     next_phase = None
-    last_relaxed_constraint = 10000
+    last_constraint = 10000
 
     # copy current config file and create new solver
     copyfile(config_file, os.path.join(output_folder, os.path.basename(config_file)))
@@ -139,32 +139,23 @@ while t < fine_pruning_iterations:
     else:
         input_caffemodel = last_finetuned_caffemodel
     # compute relaxed constraints
-    current_relaxed_constraint = relaxed_constraint(t, relaxation_function)
+    current_constraint = relaxed_constraint(t, relaxation_function)
 
     if next_phase is None or next_phase == 'bayesian optimization':
-        logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_relaxed_constraint))
+        logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_constraint))
         logging.info('Start {}th fine-pruning iteration'.format(t))
         # first do bayesian optimization given latency tradeoff factor
         start = time.time()
-        if constrained_optimization:
-            output_prefix = output_folder + '/' + str(t)
-            constrained_bayesian_optimization(n_iter=bo_iters, init_points=init_points,
-                                              input_caffemodel=input_caffemodel,
-                                              last_constraint=last_relaxed_constraint,
-                                              latency_constraint=current_relaxed_constraint,
-                                              output_prefix=output_prefix, original_latency=original_latency)
-            last_relaxed_constraint = current_relaxed_constraint
-        else:
-            # allow 4 percent drop in accuracy to trade off for 140 ms speedup
-            # latency tradeoff function changes according to cooling function
-            latency_tradeoff = (0.57-min_acc) * 100 / (last_relaxed_constraint - current_relaxed_constraint)
-            objective_function = alexnet_objective_function
-            objective_function.latency_tradeoff = latency_tradeoff
-            objective_function.original_latency = last_relaxed_constraint
-            last_relaxed_constraint = current_relaxed_constraint
-            objective_function.input_caffemodel = input_caffemodel
-            bayesian_optimization(n_iter=bo_iters, tradeoff_factors=(latency_tradeoff,),
-                                  objective_function=objective_function, init_points=init_points, kappa=kappa)
+        output_prefix = output_folder + '/' + str(t)
+
+        # call matlab bayesian optimization code
+        eng = matlab.engine.start_matlab()
+        eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
+        eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
+                                  output_prefix, original_latency, constraint_type)
+        eng.quit()
+
+        last_constraint = current_constraint
         logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
@@ -174,7 +165,7 @@ while t < fine_pruning_iterations:
         max_acc = 0
         max_log = None
         for log in logs:
-            if log.latency <= current_relaxed_constraint and log.accuracy > max_acc:
+            if log.latency <= current_constraint and log.accuracy > max_acc:
                 max_log = log
                 max_acc = log.accuracy
         logging.info('The best point chosen satisfying the constraint:')
@@ -196,7 +187,6 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'finetuning':
         # avoid affecting latency measurement, run fine-tuning and pruning from command line
         # fine-tune the pruned caffemodel until acc > min_acc or iteration > max_iter
-        # TODO: should min_acc be a function of time? since the accuracy is harder to recover later
         start = time.time()
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')

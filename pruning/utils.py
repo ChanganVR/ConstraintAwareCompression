@@ -11,12 +11,13 @@ from matplotlib import pyplot as plt
 
 class Log(object):
     def __init__(self, pruning_dict, pruning_time, testing_latency_time, latency, testing_accuracy_time,
-                 accuracy, total_time, objective_value, speedup, time):
+                 compression_rate, accuracy, total_time, objective_value, speedup, time):
         self.pruning_dict = pruning_dict
         self.pruning_time = pruning_time
         self.testing_latency_time = testing_latency_time
         self.latency = latency
         self.testing_accuracy_time = testing_accuracy_time
+        self.compression_rate = compression_rate
         self.accuracy = accuracy
         self.total_time = total_time
         self.objective_value = objective_value
@@ -30,6 +31,7 @@ class Log(object):
         string = '\n{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers) + '\n'
         string += '{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}'.format(*pruning_percentages) + '\n'
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
+        string += "{:<20} {:.2f}".format('Compression rate:', self.compression_rate) + '\n'
         string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
         string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
         string += "{:<20} {:.2f}".format('Latency ratio:', self.latency_ratio) + '\n'
@@ -97,10 +99,17 @@ def read_log(log_file):
                 error_counter += 1
                 continue
             else:
-                latency = float(lines[i+3].split()[-1])
-                accuracy = float(lines[i+4].split()[-1])
+                if 'Latency' in lines[i+3]:
+                    latency = float(lines[i+3].split()[-1])
+                    compression_rate = -1
+                elif 'Compression rate' in lines[i+3]:
+                    compression_rate = float(lines[i + 3].split()[-1])
+                    latency = -1
+                else:
+                    raise ValueError('Log file format incorrect')
+                accuracy = float(lines[i + 4].split()[-1])
             objective_value = float(lines[i+5].split()[-1])
-            log = Log(pruning_dict, -1, -1, latency, -1, accuracy, -1, objective_value,
+            log = Log(pruning_dict, -1, -1, latency, -1, compression_rate, accuracy, -1, objective_value,
                       latency / original_latency, sampling_counter)
             sampling_counter += 1
             logs.append(log)
@@ -121,7 +130,7 @@ def calculate_compression_rate(caffemodel_file, prototxt_file):
         # find the absolute threshold with percentile lower than pruning_percentage
         weights = net.params[layer][0].data
         biases = net.params[layer][1].data
-        total_parameters += np.ma.size(weights) + np.ma.size(weights)
+        total_parameters += np.ma.size(weights) + np.ma.size(biases)
         print('Layer ', layer, total_parameters)
         non_zeros += np.count_nonzero(weights) + np.count_nonzero(biases)
 
@@ -129,8 +138,8 @@ def calculate_compression_rate(caffemodel_file, prototxt_file):
 
 
 def calculate_alexnet_compression_rate(pruning_dict):
-    layer_weights_dict = {'conv1': 69696, 'conv2': 684096, 'conv3': 2453568, 'conv4': 3780672, 'conv5': 4665408,
-                          'fc6': 80162880, 'fc7': 113717312, 'fc8': 121909312}
+    layer_weights_dict = {'conv1': 34944, 'conv2': 342400, 'conv3': 1227520, 'conv4': 1891456, 'conv5': 2334080,
+                          'fc6': 40086912, 'fc7': 56868224, 'fc8': 60965224}
     total_weights = sum(layer_weights_dict.values())
     pruned_weights = 0
     for layer in pruning_dict:
@@ -163,3 +172,4 @@ def plot_val_acc_in_bo_iters(log_file):
 
 if __name__ == '__main__':
     plot_val_acc_in_bo_iters(sys.argv[1])
+
