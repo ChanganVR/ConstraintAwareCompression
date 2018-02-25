@@ -76,8 +76,12 @@ net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
 if resume_training:
     output_folder = resume_folder
 else:
-    output_folder = 'results/C_{}_cfp_{}_bo_{}_exp_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
-                                                                   exp_factor, relaxation_function)
+    if relaxation_function != 'exponential':
+        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
+                                                                relaxation_function)
+    else:
+        output_folder = 'results/C_{:.0f}_cfp_{}_bo_{}_R_{}_exp_{}'.format(latency_constraint, fine_pruning_iterations, bo_iters,
+                                                                relaxation_function, exp_factor)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
