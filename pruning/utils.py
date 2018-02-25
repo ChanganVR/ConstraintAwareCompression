@@ -147,18 +147,17 @@ def plot_val_acc_in_bo_iters(log_file):
         train_acc = []
         val_acc = []
         for r in res:
-            sampling_time.append(r[0])
-            train_acc.append(r[1])
-            val_acc.append(r[2])
+            sampling_time.append(float(r[0]))
+            train_acc.append(float(r[1]))
+            val_acc.append(float(r[2]))
         print(sampling_time, train_acc, val_acc)
 
     plt.scatter(sampling_time, train_acc)
-    plt.legend('Train accuracy')
     plt.scatter(sampling_time, val_acc)
-    plt.legend('Validation accuracy')
-    plt.xlabel('Accuracy')
-    plt.ylabel('Latency ratio(%)')
-    plt.title('Validation acc vs train acc in bo iterations')
+    plt.legend(['Train', 'Validation'])
+    plt.xlabel('Bayesian optimization iterations')
+    plt.ylabel('Accuracy')
+    plt.title('Validation acc and train acc vs bo iterations')
     plt.show()
 
 

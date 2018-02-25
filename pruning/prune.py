@@ -23,9 +23,9 @@ def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_percentage
         threshold = np.percentile(np.abs(weights), pruning_percentage * 100)
         weights[np.abs(weights) < threshold] = 0
 
-        biases = net.params[layer][1].data
-        threshold = np.percentile(np.abs(biases), pruning_percentage * 100)
-        biases[np.abs(biases) < threshold] = 0
+        # biases = net.params[layer][1].data
+        # threshold = np.percentile(np.abs(biases), pruning_percentage * 100)
+        # biases[np.abs(biases) < threshold] = 0
 
     # finish pruning and writing weights to temporary caffemodel
     net.save(output_caffemodel)

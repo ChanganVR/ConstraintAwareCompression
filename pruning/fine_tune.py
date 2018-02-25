@@ -47,8 +47,7 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     if log_file is None:
         log_file = 'results/finetuning.log'
     if os.path.exists(output_caffemodel):
-        # output_file = open(log_file, 'a+')
-        raise ValueError('Fine-tuned caffemodel already exists')
+        output_file = open(log_file, 'a+')
     else:
         output_file = open(log_file, 'w')
     sys.stdout = output_file
