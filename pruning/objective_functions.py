@@ -60,11 +60,7 @@ def alexnet_objective_function(**pruning_dict):
         prune(input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
         latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
         constraint_violation = latency - constraint
-        if constraint_violation < 0:
-            accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
-        else:
-            accuracy = -1
-            logging.info('{:<30} {:.2f}'.format('Accuracy:', accuracy))
+        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
     elif constraint_type == 'compression_rate':
         constraint_violation, accuracy = prune_and_test(input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
     else:

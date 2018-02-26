@@ -53,7 +53,7 @@ config.read(config_file)
 # fixed hyper parameters
 num_threads = 4
 batch_size = 32
-original_latency = 208
+original_latency = 238
 init_points = 20
 kappa = 10
 constrained_optimization = True
@@ -152,7 +152,6 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'bayesian optimization':
         logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_constraint))
         logging.info('Start {}th fine-pruning iteration'.format(t))
-        # first do bayesian optimization given latency tradeoff factor
         start = time.time()
         output_prefix = output_folder + '/' + str(t)
 

@@ -32,14 +32,11 @@ def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
         non_zeros += np.count_nonzero(weights) + np.count_nonzero(biases)
 
     compression_rate = non_zeros / total_params
-    if compression_rate > constraint:
-        accuracy = -1
-    else:
-        accuracy = 0
-        for i in range(test_iters):
-            net.forward()
-            accuracy += net.blobs['accuracy'].data
-        accuracy /= test_iters
+    accuracy = 0
+    for i in range(test_iters):
+        net.forward()
+        accuracy += net.blobs['accuracy'].data
+    accuracy /= test_iters
 
     with open('results/prune_and_test.txt', 'w') as fo:
         fo.write(' '.join([str(compression_rate), str(accuracy)]))
