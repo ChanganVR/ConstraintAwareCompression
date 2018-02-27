@@ -93,7 +93,7 @@ else:
                                                                   relaxation_function)
     else:
         output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                          relaxation_function, exp_factor)
+                                                                         relaxation_function, exp_factor)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -156,9 +156,10 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'bayesian optimization':
         logging.info('Start {}th fine-pruning iteration'.format(t))
         if constrained_bo:
-            logging.info('The tradeoff factor in {}th iteration is {}'.format(t, tradeoff_factor))
-        else:
             logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_constraint))
+        else:
+            current_tradeoff_factor = tradeoff_factor * (2**t)
+            logging.info('The tradeoff factor in {}th iteration is {}'.format(t, current_tradeoff_factor))
         start = time.time()
         output_prefix = output_folder + '/' + str(t)
 
@@ -166,7 +167,7 @@ while t < fine_pruning_iterations:
         eng = matlab.engine.start_matlab()
         eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
         eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
-                                  output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor)
+                                  output_prefix, original_latency, constraint_type, constrained_bo, current_tradeoff_factor)
         eng.quit()
 
         last_constraint = current_constraint
@@ -180,10 +181,6 @@ while t < fine_pruning_iterations:
         min_log = None
         for log in logs:
             if constrained_bo:
-                if log.objective_value < min_obj:
-                    min_obj = log.objective_value
-                    min_log = log
-            else:
                 if constraint_type == 'latency':
                     if log.latency <= current_constraint and log.objective_value < min_obj:
                         min_obj = log.objective_value
@@ -192,6 +189,10 @@ while t < fine_pruning_iterations:
                     if log.compression_rate <= current_constraint and log.objective_value < min_obj:
                         min_obj = log.objective_value
                         min_log = log
+            else:
+                if log.objective_value < min_obj:
+                    min_obj = log.objective_value
+                    min_log = log
         if min_log is None:
             logging.error('No point found satisfying the constraint')
         else:
@@ -238,8 +239,6 @@ while t < fine_pruning_iterations:
 
     if constrained_bo:
         t += 1
-    else:
-        break
 
 
 

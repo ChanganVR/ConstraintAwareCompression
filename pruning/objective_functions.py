@@ -84,7 +84,7 @@ def alexnet_objective_function(**pruning_dict):
         raise NotImplemented
 
     logging.debug('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))
-    logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
+    logging.info('{:<30} {:.4f}'.format('Objective value:', objective))
     if constrained_bo:
         return objective, constraint_violation
     else:
@@ -98,7 +98,7 @@ def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
     layers = [layer for layer, _ in sorted(pruning_dict.items())]
     pruning_percentages = [percent for _, percent in sorted(pruning_dict.items())]
     logging.info('{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers))
-    logging.info('{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}'.format(*pruning_percentages))
+    logging.info('{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages))
 
     pruning_dict_file = 'results/pruning_dict.txt'
     with open(pruning_dict_file, 'w') as fo:

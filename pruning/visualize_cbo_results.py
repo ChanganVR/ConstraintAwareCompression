@@ -9,23 +9,32 @@ from collections import defaultdict
 from utils import calculate_alexnet_compression_rate, read_log, Log
 
 
-def find_min_objective(logs, constraint):
+def find_min_objective(logs, constraint, constrained_bo):
     min_log = None
     min_iter = 1
-    for i, log in enumerate(logs):
-        if log.latency < constraint and (min_log is None or log.objective_value < min_log.objective_value):
-            min_log = log
-            min_iter = i
-    print('Find min objective under constraint {:.2f} in iteration {}'.format(constraint, min_iter))
-    print(min_log)
+    if constrained_bo:
+        for i, log in enumerate(logs):
+            if log.latency < constraint and (min_log is None or log.objective_value < min_log.objective_value):
+                min_log = log
+                min_iter = i
+        print('Find min objective under constraint {:.2f} in iteration {}'.format(constraint, min_iter))
+        print(min_log)
+    else:
+        for i, log in enumerate(logs):
+            if min_log is None or log.objective_value < min_log.objective_value:
+                min_log = log
+                min_iter = i
+        print('Find min objective in iteration {}'.format(min_iter))
+        print(min_log)
 
 
-def plot_accuracy_latency(logs, constraint, title=None, saturation=False, accuracy_range=None, prefix=None):
+def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturation=False, accuracy_range=None, prefix=None):
     fig, ax = plt.subplots()
     latencies = [log.latency for log in logs]
     accuracies = [log.accuracy for log in logs]
-    hline = ax.hlines(constraint, xmin=0, xmax=max(accuracies), linestyles='dashed', colors='blue')
-    hline.set_label('Current constraint: {:.0f}'.format(int(constraint)))
+    if constrained_bo:
+        hline = ax.hlines(constraint, xmin=0, xmax=max(accuracies), linestyles='dashed', colors='blue')
+        hline.set_label('Current constraint: {:.0f}'.format(int(constraint)))
     ax.legend()
     if not saturation:
         ax.plot(accuracies, latencies, 'ro')
@@ -166,16 +175,20 @@ def plot_uac_iteration(logs, upper_bound, accuracy_range=(0, 0.55), bin_width=0.
     plt.show()
 
 
-def plot_objective_time(logs, constraint=None, prefix=None):
+def plot_objective_time(logs, constraint, constrained_bo, prefix=None):
     fig, ax = plt.subplots()
     objective_values = [0]
     for log in logs:
-        if constraint is not None:
+        if constrained_bo:
             if log.objective_value < objective_values[-1] and log.latency < constraint:
                 objective_values.append(log.objective_value)
             else:
                 objective_values.append(objective_values[-1])
-
+        else:
+            if log.objective_value < objective_values[-1]:
+                objective_values.append(log.objective_value)
+            else:
+                objective_values.append(objective_values[-1])
     iterations = list(range(len(objective_values)))
     ax.plot(iterations, objective_values)
     ax.set_xlabel('Iterations')
@@ -201,16 +214,21 @@ def main(file_path):
         print('\nPlot', log_file)
         logs, constraint = read_log(log_file)
         prefix = os.path.join(fig_dir, os.path.basename(log_file)[:-4])
+        if constraint is None:
+            constrained_bo = False
+        else:
+            constrained_bo = True
         print('Number of iterations:', len(logs))
-        print('Current constraint:', constraint)
-        find_min_objective(logs, constraint)
+        if constraint is not None:
+            print('Current constraint:', constraint)
+        find_min_objective(logs, constraint, constrained_bo)
         # print('Area under curve with range ({}, {}) is {}'.format(0, 0.55, area_under_curve(logs, 1, (0, 0.55))))
         # range_distribution(logs)
-        plot_accuracy_latency(logs, constraint, saturation=True, prefix=prefix)
+        plot_accuracy_latency(logs, constraint, constrained_bo, saturation=True, prefix=prefix)
         # plot_latency_compression_curve(res)
         # plot_lower_bound_curve(res)
         # plot_uac_iteration(logs, 1, prefix=prefix)
-        plot_objective_time(logs, constraint, prefix=prefix)
+        plot_objective_time(logs, constraint, constrained_bo, prefix=prefix)
         # plot_accuracy_latency_ratio(res, saturation=True)
 
 
