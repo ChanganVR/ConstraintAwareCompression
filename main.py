@@ -87,13 +87,14 @@ if resume_training:
     output_folder = resume_folder
 else:
     if not constrained_bo:
-        output_folder = 'results/C_{:g}_fp_{}_bo_{}'.format(constraint, fine_pruning_iterations, bo_iters)
+        output_folder = 'results/C_{:g}_fp_{}_bo_{}_tf_{}'.format(constraint, fine_pruning_iterations,
+                                                                  bo_iters, tradeoff_factor)
     elif relaxation_function != 'exponential':
         output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}'.format(constraint, fine_pruning_iterations, bo_iters,
                                                                   relaxation_function)
     else:
-        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                         relaxation_function, exp_factor)
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                           relaxation_function, exp_factor)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -158,8 +159,7 @@ while t < fine_pruning_iterations:
         if constrained_bo:
             logging.info('The relaxed constraint in {}th iteration is {:.2f}'.format(t, current_constraint))
         else:
-            current_tradeoff_factor = tradeoff_factor * (2**t)
-            logging.info('The tradeoff factor in {}th iteration is {}'.format(t, current_tradeoff_factor))
+            logging.info('The tradeoff factor in {}th iteration is {}'.format(t, tradeoff_factor))
         start = time.time()
         output_prefix = output_folder + '/' + str(t)
 
@@ -167,7 +167,7 @@ while t < fine_pruning_iterations:
         eng = matlab.engine.start_matlab()
         eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
         eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
-                                  output_prefix, original_latency, constraint_type, constrained_bo, current_tradeoff_factor)
+                                  output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor)
         eng.quit()
 
         last_constraint = current_constraint

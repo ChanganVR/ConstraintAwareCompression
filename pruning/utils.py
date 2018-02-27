@@ -89,7 +89,7 @@ def read_log(log_file):
             break
         if 'Original latency' in line:
             original_latency = float(line.split()[-1])
-        if 'Current latency constraint' in line:
+        if 'Current constraint' in line:
             constraint = float(line.split()[-1])
         if 'Constraint type' in line:
             constraint_type = line.split()[-1]

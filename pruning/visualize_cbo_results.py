@@ -11,21 +11,18 @@ from utils import calculate_alexnet_compression_rate, read_log, Log
 
 def find_min_objective(logs, constraint, constrained_bo):
     min_log = None
-    min_iter = 1
+    min_obj = 0
     if constrained_bo:
         for i, log in enumerate(logs):
-            if log.latency < constraint and (min_log is None or log.objective_value < min_log.objective_value):
+            if log.latency < constraint and log.objective_value < min_obj:
+                min_obj = log.objective_value
                 min_log = log
-                min_iter = i
-        print('Find min objective under constraint {:.2f} in iteration {}'.format(constraint, min_iter))
-        print(min_log)
     else:
         for i, log in enumerate(logs):
-            if min_log is None or log.objective_value < min_log.objective_value:
+            if log.objective_value < min_obj:
+                min_obj = log.objective_value
                 min_log = log
-                min_iter = i
-        print('Find min objective in iteration {}'.format(min_iter))
-        print(min_log)
+    print(min_log)
 
 
 def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturation=False, accuracy_range=None, prefix=None):
@@ -35,7 +32,7 @@ def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturati
     if constrained_bo:
         hline = ax.hlines(constraint, xmin=0, xmax=max(accuracies), linestyles='dashed', colors='blue')
         hline.set_label('Current constraint: {:.0f}'.format(int(constraint)))
-    ax.legend()
+        ax.legend()
     if not saturation:
         ax.plot(accuracies, latencies, 'ro')
     else:

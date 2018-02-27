@@ -201,7 +201,7 @@ def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_dict):
     layers = [layer for layer, _ in sorted(pruning_dict.items())]
     pruning_percentages = [percent for _, percent in sorted(pruning_dict.items())]
     logging.info('{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers))
-    logging.info('{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}'.format(*pruning_percentages))
+    logging.info('{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages))
 
     pruning_dict_file = 'results/pruning_dict.txt'
     with open(pruning_dict_file, 'w') as fo:
