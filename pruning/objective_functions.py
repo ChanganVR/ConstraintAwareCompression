@@ -21,12 +21,14 @@ test_iters = 3
 
 
 def matlab_alexnet_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix,
-                                      original_latency, constraint_type):
+                                      original_latency, constraint_type, constrained_bo, tradeoff_factor):
     objective_function = alexnet_objective_function
     objective_function.input_caffemodel = input_caffemodel
     objective_function.constraint = current_constraint
     objective_function.original_latency = original_latency
     objective_function.constraint_type = constraint_type
+    objective_function.constrained_bo = constrained_bo
+    objective_function.tradeoff_factor = tradeoff_factor
 
     # configure output log
     log_file = output_prefix + 'bo.log'
@@ -35,11 +37,15 @@ def matlab_alexnet_objective_function(input_caffemodel, last_constraint, current
         logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Constraint type: {}'.format(constraint_type))
-        logging.info('Last constraint: {:.2f}'.format(last_constraint))
-        logging.info('Current constraint: {:.2f}'.format(current_constraint))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
+        if constrained_bo:
+            logging.info('Running constrained bayesian optimization')
+            logging.info('Last constraint: {:.2f}'.format(last_constraint))
+            logging.info('Current constraint: {:.2f}'.format(current_constraint))
+        else:
+            logging.info('Running unconstrained bayesian optimization with tradeoff factor {}'.format(tradeoff_factor))
         objective_function.log_file = log_file
-        if constraint_type == 'latency':
+        if constrained_bo and constraint_type == 'latency':
             while not test_env(original_latency, input_caffemodel, last_constraint):
                 logging.warning('Environment abnormal. Sleep for 3 seconds')
                 time.sleep(3)
@@ -55,22 +61,34 @@ def alexnet_objective_function(**pruning_dict):
     constraint = alexnet_objective_function.constraint
     input_caffemodel = alexnet_objective_function.input_caffemodel
     constraint_type = alexnet_objective_function.constraint_type
+    constrained_bo = alexnet_objective_function.constrained_bo
+    tradeoff_factor = alexnet_objective_function.tradeoff_factor
 
     if constraint_type == 'latency':
         prune(input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
         latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
         constraint_violation = latency - constraint
         accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
+        if constrained_bo:
+            objective = -1 * accuracy * 100
+        else:
+            objective = -1 * (accuracy * 100 + tradeoff_factor * latency)
     elif constraint_type == 'compression_rate':
-        constraint_violation, accuracy = prune_and_test(input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
+        compression_rate, accuracy = prune_and_test(input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
+        constraint_violation = compression_rate - constraint
+        if constrained_bo:
+            objective = -1 * accuracy * 100
+        else:
+            objective = -1 * (accuracy * 100 + tradeoff_factor * compression_rate * 100)
     else:
         raise NotImplemented
 
     logging.debug('{:<30} {:.2f}'.format('Total time(s):', time.time() - start))
-    # the bayesian optimization function in matlab minimizes the objective function
-    objective = -1 * accuracy * 100
     logging.info('{:<30} {:.2f}'.format('Objective value:', objective))
-    return objective, constraint_violation
+    if constrained_bo:
+        return objective, constraint_violation
+    else:
+        return objective
 
 
 def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
