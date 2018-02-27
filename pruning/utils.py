@@ -74,7 +74,7 @@ def find_next_phase(log_file):
 def read_log(log_file):
     # read single bayesian optimization log file
     logs = []
-    original_latency = 239
+    original_latency = 238
     with open(log_file) as fo:
         lines = [line.strip() for line in fo.readlines()]
     if len(lines) == 0:
@@ -91,19 +91,21 @@ def read_log(log_file):
             original_latency = float(line.split()[-1])
         if 'Current latency constraint' in line:
             constraint = float(line.split()[-1])
+        if 'Constraint type' in line:
+            constraint_type = line.split()[-1]
         if 'Pruning starts' in line:
             layers = [x for x in lines[i+1].split()[3:]]
             pruning_percentages = [float(x) for x in lines[i+2].split()[3:]]
             pruning_dict = {x: y for x, y in zip(layers, pruning_percentages)}
-            if 'Fail to read' in lines[i+3] or 'Fail to read' in lines[i+4]:
+            if 'Fail to' in lines[i+3] or 'Fail to' in lines[i+4]:
                 # if error occurs, skip this log
                 error_counter += 1
                 continue
             else:
-                if 'Latency' in lines[i+3]:
+                if constraint_type == 'latency':
                     latency = float(lines[i+3].split()[-1])
                     compression_rate = -1
-                elif 'Compression rate' in lines[i+3]:
+                elif constraint_type == 'compression_rate':
                     compression_rate = float(lines[i + 3].split()[-1])
                     latency = -1
                 else:

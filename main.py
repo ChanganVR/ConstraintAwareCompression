@@ -65,7 +65,7 @@ constrained_bo = config.getboolean('input', 'constrained_bayesian_optimization')
 
 # constrained bayesian optimization
 fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
-tradeoff_factor = config.get('cbo', 'tradeoff_factor')
+tradeoff_factor = config.getfloat('cbo', 'tradeoff_factor')
 exp_factor = config.getfloat('cbo', 'exp_factor')
 bo_iters = config.getint('cbo', 'bo_iters')
 relaxation_function = config.get('cbo', 'relaxation_function')
@@ -92,7 +92,7 @@ else:
         output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}'.format(constraint, fine_pruning_iterations, bo_iters,
                                                                   relaxation_function)
     else:
-        output_folder = 'results/C_{:.g}_cfp_{}_bo_{}_R_{}_exp_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{}'.format(constraint, fine_pruning_iterations, bo_iters,
                                                                           relaxation_function, exp_factor)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
@@ -236,7 +236,10 @@ while t < fine_pruning_iterations:
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
-    t += 1
+    if constrained_bo:
+        t += 1
+    else:
+        break
 
 
 

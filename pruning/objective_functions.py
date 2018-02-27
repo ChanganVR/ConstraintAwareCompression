@@ -72,14 +72,14 @@ def alexnet_objective_function(**pruning_dict):
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
-            objective = -1 * (accuracy * 100 + tradeoff_factor * latency)
+            objective = -1 * (accuracy * 100 + tradeoff_factor * (238 - latency))
     elif constraint_type == 'compression_rate':
         compression_rate, accuracy = prune_and_test(input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
         constraint_violation = compression_rate - constraint
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
-            objective = -1 * (accuracy * 100 + tradeoff_factor * compression_rate * 100)
+            objective = -1 * (accuracy * 100 + tradeoff_factor * (1 - compression_rate) * 100)
     else:
         raise NotImplemented
 
@@ -115,7 +115,7 @@ def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
         compression_rate, accuracy = [float(x) for x in fo.read().strip().split()]
         logging.info('{:<30} {:.4f}'.format('Compression rate:', compression_rate))
         logging.info('{:<30} {:.4f}'.format('Accuracy:', accuracy))
-    return compression_rate - constraint, accuracy
+    return compression_rate, accuracy
 
 
 def test_env(original_latency, input_caffemodel, last_constraint):
