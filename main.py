@@ -152,7 +152,10 @@ while t < fine_pruning_iterations:
     else:
         input_caffemodel = last_finetuned_caffemodel
     # compute relaxed constraints
-    current_constraint = relaxed_constraint(t, relaxation_function)
+    if constrained_bo:
+        current_constraint = relaxed_constraint(t, relaxation_function)
+    else:
+        current_constraint = constraint
 
     if next_phase is None or next_phase == 'bayesian optimization':
         logging.info('Start {}th fine-pruning iteration'.format(t))
@@ -177,33 +180,32 @@ while t < fine_pruning_iterations:
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
         logs, _ = read_log(log_file=os.path.join(output_folder, str(t) + 'bo.log'))
-        min_obj = 0
-        min_log = None
+        max_acc = 0
+        max_log = None
         for log in logs:
-            if constrained_bo:
-                if constraint_type == 'latency':
-                    if log.latency <= current_constraint and log.objective_value < min_obj:
-                        min_obj = log.objective_value
-                        min_log = log
-                elif constraint_type == 'compression_rate':
-                    if log.compression_rate <= current_constraint and log.objective_value < min_obj:
-                        min_obj = log.objective_value
-                        min_log = log
+            # same for unconstrained bo, look for best accuracy with constraint satisfied
+            if constraint_type == 'latency':
+                if log.latency > current_constraint:
+                    continue
+            elif constraint_type == 'compression_rate':
+                if log.compression_rate > current_constraint:
+                    continue
             else:
-                if log.objective_value < min_obj:
-                    min_obj = log.objective_value
-                    min_log = log
-        if min_log is None:
+                raise NotImplementedError
+            if log.accuracy > max_acc:
+                max_acc = log.accuracy
+                max_log = log
+        if max_log is None:
             logging.error('No point found satisfying the constraint')
         else:
             logging.info('The best point chosen satisfying the constraint:')
-            logging.info(min_log)
+            logging.info(max_log)
 
         # prune best point in sampled results
         start = time.time()
         pruning_dict_file = 'results/pruning_dict.txt'
         with open(pruning_dict_file, 'w') as fo:
-            json.dump(min_log.pruning_dict, fo)
+            json.dump(max_log.pruning_dict, fo)
         command = ['python', 'pruning/prune.py', input_caffemodel, original_prototxt,
                    best_sampled_caffemodel, pruning_dict_file]
         os.system(' '.join(command))

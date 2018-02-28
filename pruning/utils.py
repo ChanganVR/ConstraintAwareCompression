@@ -30,11 +30,11 @@ class Log(object):
         layers = [layer for layer, _ in sorted(self.pruning_dict.items())]
         pruning_percentages = [percent for _, percent in sorted(self.pruning_dict.items())]
         string = '\n{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers) + '\n'
-        string += '{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}{:<10.2f}'.format(*pruning_percentages) + '\n'
+        string += '{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages) + '\n'
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
-        string += "{:<20} {:.2f}".format('Compression rate:', self.compression_rate) + '\n'
-        string += "{:<20} {:.2f}".format('Accuracy:', self.accuracy) + '\n'
-        string += "{:<20} {:.2f}".format('Objective:', self.objective_value) + '\n'
+        string += "{:<20} {:.4f}".format('Compression rate:', self.compression_rate) + '\n'
+        string += "{:<20} {:.4f}".format('Accuracy:', self.accuracy) + '\n'
+        string += "{:<20} {:.4f}".format('Objective:', self.objective_value) + '\n'
         string += "{:<20} {:.2f}".format('Latency ratio:', self.latency_ratio) + '\n'
         string += "{:<20} {:.2f}".format('Sampled iteration:', self.sampled_iteration)
         return string
