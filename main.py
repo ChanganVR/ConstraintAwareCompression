@@ -50,18 +50,11 @@ else:
 config = ConfigParser.RawConfigParser()
 config.read(config_file)
 
-# fixed hyper parameters
-num_threads = 4
-batch_size = 32
-original_latency = 238
-init_points = 20
-kappa = 10
-constrained_optimization = True
-
 # input parameter
 constraint_type = config.get('input', 'constraint_type')
 constraint = config.getfloat('input', 'constraint')
 constrained_bo = config.getboolean('input', 'constrained_bayesian_optimization')
+network = config.get('input', 'network')
 
 # constrained bayesian optimization
 fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
@@ -79,22 +72,36 @@ stepsize = config.getint('fine-tuning', 'stepsize')
 regularization = config.get('fine-tuning', 'regularization')
 weight_decay = config.getfloat('fine-tuning', 'weight_decay')
 
+# fixed hyper parameters
+num_threads = 4
+batch_size = 32
+original_latency = 238
+init_points = 20
+constrained_optimization = True
+
 # some path variables
-original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
-original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
+if network == 'alexnet':
+    original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+    original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+    finetune_net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
+elif network == 'resnet':
+    original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
+    original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
+    finetune_net = 'models/resnet/ResNet-50-train-val-ft.prototxt'
+else:
+    raise NotImplementedError
 if resume_training:
     output_folder = resume_folder
 else:
     if not constrained_bo:
-        output_folder = 'results/C_{:g}_fp_{}_bo_{}_tf_{}'.format(constraint, fine_pruning_iterations,
-                                                                  bo_iters, tradeoff_factor)
+        output_folder = 'results/C_{:g}_fp_{}_bo_{}_tf_{}_{}'.format(constraint, fine_pruning_iterations,
+                                                                     bo_iters, tradeoff_factor, network)
     elif relaxation_function != 'exponential':
-        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                  relaxation_function)
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                     relaxation_function, network)
     else:
-        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                           relaxation_function, exp_factor)
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                              relaxation_function, exp_factor, network)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -131,9 +138,9 @@ else:
     # copy current config file and create new solver
     copyfile(config_file, os.path.join(output_folder, os.path.basename(config_file)))
     with open(finetune_solver, 'w') as fo:
-        fo.write('net: "{}"\n'.format(net))
-        fo.write('test_iter: {}\n'.format(100))
-        fo.write('test_interval: {}\n'.format(10000))
+        fo.write('net: "{}"\n'.format(finetune_net))
+        # fo.write('test_iter: {}\n'.format(100))
+        # fo.write('test_interval: {}\n'.format(10000))
         fo.write('base_lr: {}\n'.format(learning_rate))
         fo.write('gamma: {}\n'.format(gamma))
         fo.write('lr_policy: "{}"\n'.format('step'))
@@ -170,7 +177,8 @@ while t < fine_pruning_iterations:
         eng = matlab.engine.start_matlab()
         eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
         eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
-                                  output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor)
+                                  output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor,
+                                  network)
         eng.quit()
 
         last_constraint = current_constraint
@@ -230,9 +238,9 @@ while t < fine_pruning_iterations:
         # find acc/iter information in fine-tuning
         with open(finetuning_logfile) as fo:
             log = fo.read()
-        acc_before = re.findall(r"Accuracy before: (0\.\d+)", log)[0]
-        acc_after = re.findall(r"Accuracy after: (0\.\d+)", log)[0]
-        total_iterations = re.findall(r"Total iterations: (\d+)", log)[0]
+        acc_before = re.findall(r"Accuracy before: (0\.\d+)", log)[-1]
+        acc_after = re.findall(r"Accuracy after: (0\.\d+)", log)[-1]
+        total_iterations = re.findall(r"Total iterations: (\d+)", log)[-1]
         logging.info('Accuracy before: {}'.format(acc_before))
         logging.info('Accuracy after: {}'.format(acc_after))
         logging.info('Number of iterations: {}'.format(total_iterations))

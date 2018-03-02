@@ -9,42 +9,63 @@ import time
 from utils import read_log
 import numpy as np
 
-
 # prune the network according to the parameters
-original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
-original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-bo_acc_prototxt = 'models/bvlc_reference_caffenet/bo_acc.prototxt'
-test_env_prototxt = 'models/bvlc_reference_caffenet/test_env.prototxt'
-sconv_prototxt = 'models/bvlc_reference_caffenet/test_direct_sconv_mkl.prototxt'
+original_prototxt = None
+original_caffemodel = None
+# bo acc is tested on the train set
+bo_acc_prototxt = None
+# test env with specific val batch size
+test_env_prototxt = None
+# conv mode needs to be sparse
+sconv_prototxt = None
 temp_caffemodel = 'results/temp_alexnet.caffemodel'
 test_iters = 3
 
 
-def matlab_alexnet_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix,
-                                      original_latency, constraint_type, constrained_bo, tradeoff_factor):
-    objective_function = alexnet_objective_function
-    objective_function.input_caffemodel = input_caffemodel
-    objective_function.constraint = current_constraint
-    objective_function.original_latency = original_latency
-    objective_function.constraint_type = constraint_type
-    objective_function.constrained_bo = constrained_bo
-    objective_function.tradeoff_factor = tradeoff_factor
+def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix,
+                              original_latency, constraint_type, constrained_bo, tradeoff_factor, network):
+    objective_func = objective_function
+    objective_func.input_caffemodel = input_caffemodel
+    objective_func.constraint = current_constraint
+    objective_func.original_latency = original_latency
+    objective_func.constraint_type = constraint_type
+    objective_func.constrained_bo = constrained_bo
+    objective_func.tradeoff_factor = tradeoff_factor
+    objective_func.network = network
+
+    global original_prototxt
+    global original_caffemodel
+    global bo_acc_prototxt
+    global test_env_prototxt
+    global sconv_prototxt
+    if network == 'alexnet':
+        original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+        original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+        model_dir = 'models/bvlc_reference_caffenet'
+    elif network == 'resnet':
+        original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
+        original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
+        model_dir = 'models/resnet'
+    bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
+    test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
+    sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl.prototxt')
 
     # configure output log
     log_file = output_prefix + 'bo.log'
-    if not hasattr(objective_function, 'log_file') or objective_function.log_file != log_file:
+    if not hasattr(objective_func, 'log_file') or objective_func.log_file != log_file:
         reload(logging)
         logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Constraint type: {}'.format(constraint_type))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
+        logging.info('Input netwokr: {}'.format(network))
         if constrained_bo:
             logging.info('Running constrained bayesian optimization')
             logging.info('Last constraint: {:.2f}'.format(last_constraint))
             logging.info('Current constraint: {:.2f}'.format(current_constraint))
         else:
             logging.info('Running unconstrained bayesian optimization with tradeoff factor {}'.format(tradeoff_factor))
-        objective_function.log_file = log_file
+        objective_func.log_file = log_file
         if constrained_bo and constraint_type == 'latency':
             while not test_env(original_latency, input_caffemodel, last_constraint):
                 logging.warning('Environment abnormal. Sleep for 3 seconds')
@@ -52,20 +73,21 @@ def matlab_alexnet_objective_function(input_caffemodel, last_constraint, current
         else:
             os.environ['LD_LIBRARY_PATH'] = '/local-scratch/changan-home/lib/boost/lib:/local-scratch/changan-home/intel/itac/2018.1.017/intel64/slib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/../tbb/lib/intel64_lin/gcc4.4:/usr/local-linux/lib'
 
-    return objective_function
+    return objective_func
 
 
-def alexnet_objective_function(**pruning_dict):
+def objective_function(**pruning_dict):
     start = time.time()
     # set some hyper parameters
-    constraint = alexnet_objective_function.constraint
-    input_caffemodel = alexnet_objective_function.input_caffemodel
-    constraint_type = alexnet_objective_function.constraint_type
-    constrained_bo = alexnet_objective_function.constrained_bo
-    tradeoff_factor = alexnet_objective_function.tradeoff_factor
+    constraint = objective_function.constraint
+    input_caffemodel = objective_function.input_caffemodel
+    constraint_type = objective_function.constraint_type
+    constrained_bo = objective_function.constrained_bo
+    tradeoff_factor = objective_function.tradeoff_factor
+    network = objective_function.network
 
     if constraint_type == 'latency':
-        prune(input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
+        prune(network, input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
         latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
         constraint_violation = latency - constraint
         accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
@@ -74,7 +96,7 @@ def alexnet_objective_function(**pruning_dict):
         else:
             objective = -1 * (accuracy * 100 + tradeoff_factor * (238 - latency))
     elif constraint_type == 'compression_rate':
-        compression_rate, accuracy = prune_and_test(input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
+        compression_rate, accuracy = prune_and_test(network, input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
         constraint_violation = compression_rate - constraint
         if constrained_bo:
             objective = -1 * accuracy * 100
@@ -91,15 +113,52 @@ def alexnet_objective_function(**pruning_dict):
         return objective
 
 
-def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
+def convert_pruning_dict(network, pruning_dict):
+    if network == 'alexnet':
+        converted_pruning_dict = pruning_dict
+    elif network == 'resnet':
+        resnet_blocks = dict()
+        resnet_blocks['conv1'] = ['conv1']
+        resnet_blocks['conv2'] = ['res2a_branch2a', 'res2a_branch2b', 'res2a_branch2c', 'res2a_branch1',
+                                  'res2b_branch2a', 'res2b_branch2b', 'res2b_branch2c',
+                                  'res2c_branch2a', 'res2c_branch2b', 'res2c_branch2c']
+        resnet_blocks['conv3'] = ['res3a_branch2a', 'res3a_branch2b', 'res3a_branch2c', 'res3a_branch1',
+                                  'res3b_branch2a', 'res3b_branch2b', 'res3b_branch2c',
+                                  'res3c_branch2a', 'res3c_branch2b', 'res3c_branch2c',
+                                  'res3d_branch2a', 'res3d_branch2b', 'res3d_branch2c']
+        resnet_blocks['conv4'] = ['res4a_branch2a', 'res4a_branch2b', 'res4a_branch2c', 'res4a_branch1',
+                                  'res4b_branch2a', 'res4b_branch2b', 'res4b_branch2c',
+                                  'res4c_branch2a', 'res4c_branch2b', 'res4c_branch2c',
+                                  'res4d_branch2a', 'res4d_branch2b', 'res4d_branch2c',
+                                  'res4e_branch2a', 'res4e_branch2b', 'res4e_branch2c',
+                                  'res4f_branch2a', 'res4f_branch2b', 'res4f_branch2c']
+        resnet_blocks['conv5'] = ['res5a_branch2a', 'res5a_branch2b', 'res5a_branch2c', 'res5a_branch1',
+                                  'res5b_branch2a', 'res5b_branch2b', 'res5b_branch2c',
+                                  'res5c_branch2a', 'res5c_branch2b', 'res5c_branch2c']
+        resnet_blocks['fc'] = ['fc1000']
+        converted_pruning_dict = dict()
+        for block in resnet_blocks:
+            for layer in resnet_blocks[block]:
+                converted_pruning_dict[layer] = pruning_dict[block]
+    else:
+        raise NotImplementedError
+
+    layers = [layer for layer, _ in sorted(converted_pruning_dict.items())]
+    pruning_percentages = [percent for _, percent in sorted(converted_pruning_dict.items())]
+    logging.debug(('{:<10}'*len(layers)).format(*layers))
+    logging.debug(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
+
+
+def prune_and_test(network, input_caffemodel, prototxt, constraint, pruning_dict):
     # prune the input caffemodel, calculate its compression rate and accuracy on training set
     start = time.time()
     logging.info('=================================>>>Pruning starts<<<=================================')
     layers = [layer for layer, _ in sorted(pruning_dict.items())]
     pruning_percentages = [percent for _, percent in sorted(pruning_dict.items())]
-    logging.info('{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers))
-    logging.info('{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages))
+    logging.info(('{:<10}'*len(layers)).format(*layers))
+    logging.info(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
 
+    pruning_dict = convert_pruning_dict(network, pruning_dict)
     pruning_dict_file = 'results/pruning_dict.txt'
     with open(pruning_dict_file, 'w') as fo:
         json.dump(pruning_dict, fo)
@@ -123,7 +182,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
     os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
     os.environ['LD_LIBRARY_PATH'] = '/local-scratch/changan-home/lib/boost/lib:/local-scratch/changan-home/intel/itac/2018.1.017/intel64/slib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/lib/boost/lib:/local-scratch/changan-home/intel/itac/2018.1.017/intel64/slib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/../tbb/lib/intel64_lin/gcc4.4:/usr/local-linux/lib'
     # test original caffemodel latency in current environment, should not have a big different with normal latency
-    if not hasattr(alexnet_objective_function, 'test_env'):
+    if not hasattr(objective_function, 'test_env'):
         logging.info('=================================>>>Test environment<<<=================================')
         logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
 
@@ -139,7 +198,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
             logging.error('Test input latency is off from last constraint too much. Check the environment!')
             return False
 
-        alexnet_objective_function.test_env = True
+        objective_function.test_env = True
         return True
 
 
@@ -195,14 +254,15 @@ def test_latency(prototxt_file, temp_caffemodel_file, test_iters):
     return latency
 
 
-def prune(caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_dict):
+def prune(network, caffemodel_file, prototxt_file, temp_caffemodel_file, pruning_dict):
     start = time.time()
     logging.info('=================================>>>Pruning starts<<<=================================')
     layers = [layer for layer, _ in sorted(pruning_dict.items())]
     pruning_percentages = [percent for _, percent in sorted(pruning_dict.items())]
-    logging.info('{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers))
-    logging.info('{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages))
+    logging.info(('{:<10}'*len(layers)).format(*layers))
+    logging.info(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
 
+    pruning_dict = convert_pruning_dict(network, pruning_dict)
     pruning_dict_file = 'results/pruning_dict.txt'
     with open(pruning_dict_file, 'w') as fo:
         json.dump(pruning_dict, fo)

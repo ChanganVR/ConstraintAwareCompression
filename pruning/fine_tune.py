@@ -43,6 +43,8 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     disp_interval = 100
     min_acc = float(min_acc)
     max_iter = int(max_iter)
+    best_val_acc = 0
+    best_val_iter = 0
 
     if log_file is None:
         log_file = 'results/finetuning.log'
@@ -67,15 +69,23 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     else:
         solver.net.copy_from(output_caffemodel)
         logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
+
     iter_cnt = 0
     while iter_cnt < max_iter:
+        # early stopping
+        if best_val_iter - iter_cnt >= 5000:
+            break
         # test
         if iter_cnt % test_interval == 0:
             # switch net to test mode
             acc = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+            if acc > best_val_acc:
+                best_val_acc = acc
+                best_val_iter = iter_cnt
             if iter_cnt == 0:
                 accuracy_before = acc
-            if acc >= min_acc:
+            # not final fine-tuning
+            if max_iter <= 20000 and acc >= min_acc:
                 break
 
         # fine-tune
@@ -87,8 +97,9 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
 
     # test final accuracy
     accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
-    logging.info('Accuracy before: {:.3f}'.format(accuracy_before))
-    logging.info('Accuracy after: {:.3f}'.format(accuracy_after))
+    logging.info('Accuracy before: {:.4f}'.format(accuracy_before))
+    logging.info('Accuracy after: {:.4f}'.format(accuracy_after))
+    logging.info('Best validation accuracy {:.4f} in iterations {}'.format(best_val_acc, best_val_iter))
     logging.info('Total iterations: {}'.format(iter_cnt))
     logging.info('Fine-tuning ends')
     output_file.close()
