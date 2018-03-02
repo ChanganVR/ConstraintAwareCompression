@@ -39,10 +39,10 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     """
     # some fine-tuning parameters
     test_iters = 1000
-    test_interval = 5000
-    disp_interval = 1000
-    step_iters = 1000
-    early_stopping_iters = 10000
+    test_interval = 2000
+    disp_interval = 500
+    step_iters = 500
+    early_stopping_iters = 6000
     min_acc = float(min_acc)
     max_iter = int(max_iter)
     best_val_acc = 0
