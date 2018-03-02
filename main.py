@@ -145,7 +145,7 @@ else:
         fo.write('gamma: {}\n'.format(gamma))
         fo.write('lr_policy: "{}"\n'.format('step'))
         fo.write('stepsize: {}\n'.format(stepsize))
-        fo.write('display: {}\n'.format(200))
+        fo.write('display: {}\n'.format(1000))
         fo.write('max_iter: {}\n'.format(max_iter))
         fo.write('momentum: {}\n'.format(0.9))
         if regularization == 'L1':

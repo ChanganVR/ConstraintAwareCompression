@@ -39,8 +39,10 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     """
     # some fine-tuning parameters
     test_iters = 1000
-    test_interval = 1000
-    disp_interval = 100
+    test_interval = 5000
+    disp_interval = 1000
+    step_iters = 1000
+    early_stopping_iters = 10000
     min_acc = float(min_acc)
     max_iter = int(max_iter)
     best_val_acc = 0
@@ -73,7 +75,7 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
     iter_cnt = 0
     while iter_cnt < max_iter:
         # early stopping
-        if best_val_iter - iter_cnt >= 5000:
+        if best_val_iter - iter_cnt >= early_stopping_iters:
             break
         # test
         if iter_cnt % test_interval == 0:
@@ -89,11 +91,11 @@ def fine_tune(input_caffemodel, solver_file, output_caffemodel, min_acc, max_ite
                 break
 
         # fine-tune
-        solver.step(1)
+        solver.step(step_iters)
         loss = solver.net.blobs['loss'].data
-        if iter_cnt % disp_interval == 0 or iter_cnt + 1 == max_iter:
+        iter_cnt += step_iters
+        if iter_cnt % disp_interval == 0 or iter_cnt == max_iter:
             logging.info('Training iteration {}, loss: {:.2f}'.format(iter_cnt, loss))
-        iter_cnt += 1
 
     # test final accuracy
     accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
