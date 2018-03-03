@@ -32,7 +32,11 @@ def create_solver_file(solver_file, finetune_net, learning_rate, disp_interval, 
     # create fine-tune solver
     with open(solver_file, 'w') as fo:
         fo.write('net: "{}"\n'.format(finetune_net))
+        fo.write('test_iter: {}\n'.format(1))
+        fo.write('test_interval: {}\n'.format(1000000))
         fo.write('base_lr: {}\n'.format(learning_rate))
+        fo.write('lr_policy: "{}"\n'.format('step'))
+        fo.write('stepsize: {}\n'.format(1000000))
         fo.write('display: {}\n'.format(disp_interval))
         fo.write('momentum: {}\n'.format(momentum))
         fo.write('solver_mode: {}\n'.format('GPU'))
