@@ -63,15 +63,6 @@ exp_factor = config.getfloat('cbo', 'exp_factor')
 bo_iters = config.getint('cbo', 'bo_iters')
 relaxation_function = config.get('cbo', 'relaxation_function')
 
-# fine-tuning
-min_acc = config.getfloat('fine-tuning', 'min_acc')
-max_iter = config.getint('fine-tuning', 'max_iter')
-learning_rate = config.getfloat('fine-tuning', 'learning_rate')
-gamma = config.getfloat('fine-tuning', 'gamma')
-stepsize = config.getint('fine-tuning', 'stepsize')
-regularization = config.get('fine-tuning', 'regularization')
-weight_decay = config.getfloat('fine-tuning', 'weight_decay')
-
 # fixed hyper parameters
 num_threads = 4
 batch_size = 32
@@ -106,7 +97,9 @@ finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
-
+local_config = os.path.join(output_folder, os.path.basename(config_file))
+if not os.path.exists(local_config):
+    copyfile(config_file, local_config)
 
 if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
@@ -135,23 +128,6 @@ else:
     next_phase = None
     last_constraint = 10000
 
-    # copy current config file and create new solver
-    copyfile(config_file, os.path.join(output_folder, os.path.basename(config_file)))
-    with open(finetune_solver, 'w') as fo:
-        fo.write('net: "{}"\n'.format(finetune_net))
-        # fo.write('test_iter: {}\n'.format(100))
-        # fo.write('test_interval: {}\n'.format(10000))
-        fo.write('base_lr: {}\n'.format(learning_rate))
-        fo.write('gamma: {}\n'.format(gamma))
-        fo.write('lr_policy: "{}"\n'.format('step'))
-        fo.write('stepsize: {}\n'.format(stepsize))
-        fo.write('display: {}\n'.format(1000))
-        fo.write('max_iter: {}\n'.format(max_iter))
-        fo.write('momentum: {}\n'.format(0.9))
-        if regularization == 'L1':
-            fo.write('regularization_type: {}\n'.format(regularization))
-            fo.write('weight_decay: {}\n'.format(weight_decay))
-        fo.write('solver_mode: {}\n'.format('GPU'))
 
 while t < fine_pruning_iterations:
     if t == 0:
@@ -228,8 +204,8 @@ while t < fine_pruning_iterations:
         start = time.time()
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')
-        command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_solver,
-                   last_finetuned_caffemodel, str(min_acc), str(max_iter), finetuning_logfile]
+        command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_net,
+                   last_finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile]
         os.system(' '.join(command))
         logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):
