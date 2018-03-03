@@ -5,9 +5,7 @@ import os
 import logging
 import ConfigParser
 os.environ['GLOG_minloglevel'] = '0'
-sys.path.append('/local-scratch/changan-home/SkimCaffe/python')
 import caffe
-
 caffe.set_device(0)
 caffe.set_mode_gpu()
 
@@ -55,9 +53,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     base_lr = config.getfloat('fine-tuning', 'base_lr')
     momentum = config.getfloat('fine-tuning', 'momentum')
     gamma = config.getfloat('fine-tuning', 'gamma')
-    stepsizes = config.get('fine-tuning', 'stepsize')
-    stepsizes = [int(x) for x in stepsizes.split(',')]
-    stepsize_done = [0] * (len(stepsizes) + 1)
+    stepsize = config.getint('fine-tuning', 'stepsize')
     test_iters = config.getint('fine-tuning', 'test_iters')
     test_interval = config.getint('fine-tuning', 'test_interval')
     disp_interval = config.getint('fine-tuning', 'disp_interval')
@@ -78,27 +74,19 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
 
-    iter_cnt = 0
-    stage = 0
-    while iter_cnt < max_iter:
-        # n step sizes will have n+1 stages
-        if stage < len(stepsizes) and stepsizes[stage] <= iter_cnt:
-            stage += 1
-        if stepsize_done[stage] == 0:
-            learning_rate = base_lr * (gamma ** stage)
-            logging.info('In stage {}, learning rate is {}'.format(stage, learning_rate))
-            create_solver_file(solver_file, finetune_net, learning_rate, disp_interval, momentum)
-            solver = caffe.get_solver(solver_file)
-            if not os.path.exists(output_caffemodel):
-                solver.net.copy_from(input_caffemodel)
-                if stage == 0:
-                    logging.info('Fine-tune caffemodel from {}'.format(input_caffemodel))
-            else:
-                solver.net.copy_from(output_caffemodel)
-                if stage == 0:
-                    logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
-            stepsize_done[stage] = 1
+    learning_rate = base_lr
+    logging.info('Current learning rate is {}'.format(learning_rate))
+    create_solver_file(solver_file, finetune_net, learning_rate, disp_interval, momentum)
+    solver = caffe.get_solver(solver_file)
+    if not os.path.exists(output_caffemodel):
+        solver.net.copy_from(input_caffemodel)
+        logging.info('Fine-tune caffemodel from {}'.format(input_caffemodel))
+    else:
+        solver.net.copy_from(output_caffemodel)
+        logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
 
+    iter_cnt = 0
+    while iter_cnt < max_iter:
         # early stopping
         if best_val_iter - iter_cnt >= early_stopping_iters:
             break
