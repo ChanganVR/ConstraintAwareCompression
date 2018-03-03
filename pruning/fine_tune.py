@@ -59,7 +59,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     stepsizes = [int(x) for x in stepsizes.split(',')]
     stepsize_done = [0] * (len(stepsizes) + 1)
     test_iters = config.getint('fine-tuning', 'test_iters')
-    test_interval = config.getint('fine-tuning', 'test_iters')
+    test_interval = config.getint('fine-tuning', 'test_interval')
     disp_interval = config.getint('fine-tuning', 'disp_interval')
     step_iters = config.getint('fine-tuning', 'step_iters')
     early_stopping_iters = config.getint('fine-tuning', 'early_stopping_iters')
