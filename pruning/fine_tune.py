@@ -88,7 +88,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     iter_cnt = 0
     while iter_cnt < max_iter:
         # early stopping
-        if best_val_iter - iter_cnt >= early_stopping_iters:
+        if iter_cnt - best_val_iter >= early_stopping_iters:
             break
         # test
         if iter_cnt % test_interval == 0:

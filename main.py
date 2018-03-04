@@ -98,8 +98,6 @@ best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
 log_file = os.path.join(output_folder, 'fine_pruning.log')
 local_config = os.path.join(output_folder, os.path.basename(config_file))
-if not os.path.exists(local_config):
-    copyfile(config_file, local_config)
 
 if resume_training:
     logging.basicConfig(filename=log_file, filemode='a+', level=logging.INFO,
@@ -115,6 +113,8 @@ elif os.path.exists(output_folder):
     raise IOError('{} already exist.'.format(output_folder))
 else:
     os.mkdir(output_folder)
+    if not os.path.exists(local_config):
+        copyfile(config_file, local_config)
     logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     # logging.info('{:<40} {}'.format('Original latency:', original_latency))

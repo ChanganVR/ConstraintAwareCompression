@@ -58,7 +58,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Constraint type: {}'.format(constraint_type))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
-        logging.info('Input netwokr: {}'.format(network))
+        logging.info('Input network: {}'.format(network))
         if constrained_bo:
             logging.info('Running constrained bayesian optimization')
             logging.info('Last constraint: {:.2f}'.format(last_constraint))
@@ -148,6 +148,8 @@ def convert_pruning_dict(network, pruning_dict):
     logging.debug(('{:<10}'*len(layers)).format(*layers))
     logging.debug(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
 
+    return converted_pruning_dict
+
 
 def prune_and_test(network, input_caffemodel, prototxt, constraint, pruning_dict):
     # prune the input caffemodel, calculate its compression rate and accuracy on training set
@@ -188,13 +190,13 @@ def test_env(original_latency, input_caffemodel, last_constraint):
 
         logging.info('Test original caffemodel latency with normal conv:')
         test_env_latency = test_latency(test_env_prototxt, original_caffemodel, test_iters)
-        if abs(test_env_latency - original_latency) > 10:
+        if abs(test_env_latency - original_latency) > 3:
             logging.error('Test original latency is off from normal latency too much. Check the environment!')
             return False
 
         logging.info('Test input caffemodel latency with sparse conv:')
         test_input_latency = test_latency(sconv_prototxt, input_caffemodel, test_iters)
-        if test_input_latency - last_constraint > 10:
+        if test_input_latency - last_constraint > 3:
             logging.error('Test input latency is off from last constraint too much. Check the environment!')
             return False
 

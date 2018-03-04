@@ -122,22 +122,22 @@ def read_log(log_file):
     return logs, constraint
 
 
-def calculate_compression_rate(caffemodel_file, prototxt_file):
-    os.environ['GLOG_minloglevel'] = '2'
-    import caffe
-
-    net = caffe.Net(prototxt_file, caffemodel_file, caffe.TEST)
-    total_parameters = 0
-    non_zeros = 0
-    for layer in net.params:
-        # find the absolute threshold with percentile lower than pruning_percentage
-        weights = net.params[layer][0].data
-        biases = net.params[layer][1].data
-        total_parameters += np.ma.size(weights) + np.ma.size(biases)
-        print('Layer ', layer, total_parameters)
-        non_zeros += np.count_nonzero(weights) + np.count_nonzero(biases)
-
-    return non_zeros / total_parameters
+# def calculate_compression_rate(caffemodel_file, prototxt_file):
+#     os.environ['GLOG_minloglevel'] = '2'
+#     import caffe
+#
+#     net = caffe.Net(prototxt_file, caffemodel_file, caffe.TEST)
+#     total_parameters = 0
+#     non_zeros = 0
+#     for layer in net.params:
+#         # find the absolute threshold with percentile lower than pruning_percentage
+#         weights = net.params[layer][0].data
+#         biases = net.params[layer][1].data
+#         total_parameters += np.ma.size(weights) + np.ma.size(biases)
+#         print('Layer ', layer, total_parameters)
+#         non_zeros += np.count_nonzero(weights) + np.count_nonzero(biases)
+#
+#     return non_zeros / total_parameters
 
 
 def calculate_alexnet_compression_rate(pruning_dict):
