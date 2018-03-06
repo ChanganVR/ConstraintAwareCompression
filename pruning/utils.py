@@ -173,6 +173,33 @@ def plot_val_acc_in_bo_iters(log_file):
     plt.show()
 
 
-if __name__ == '__main__':
-    plot_val_acc_in_bo_iters(sys.argv[1])
+def calculate_compression_rate(input_caffemodel, prototxt):
+    os.environ['GLOG_minloglevel'] = '2'
+    import caffe
 
+    # read and prune caffemodel weights
+    net = caffe.Net(prototxt, input_caffemodel, caffe.TEST)
+    total_params = 0
+    non_zeros = 0
+    layer_dict = dict()
+    for layer in net.params:
+        weights = net.params[layer][0].data
+        biases = net.params[layer][1].data
+        layer_params = np.ma.size(weights) + np.ma.size(biases)
+        total_params += layer_params
+        layer_non_zeros = np.count_nonzero(weights) + np.count_nonzero(biases)
+        non_zeros += layer_non_zeros
+        layer_dict[layer] = layer_non_zeros / layer_params
+
+    # print density
+    layers = [layer for layer, _ in sorted(layer_dict.items())]
+    pruning_percentages = [percent for _, percent in sorted(layer_dict.items())]
+    print(('{:<10}'*len(layers)).format(*layers))
+    print(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
+    compression_rate = non_zeros / total_params
+    print('Caffemodel non-zero density: {:4f}'.format(compression_rate))
+
+
+if __name__ == '__main__':
+    # plot_val_acc_in_bo_iters(sys.argv[1])
+    calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')

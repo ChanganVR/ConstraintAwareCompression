@@ -14,7 +14,7 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
     py.reload(mod);
 
     if strcmp(network, 'alexnet')
-        conv1 = optimizableVariable('conv1', [0, 1]);
+        % conv1 = optimizableVariable('conv1', [0, 1]);
         conv2 = optimizableVariable('conv2', [0, 1]);
         conv3 = optimizableVariable('conv3', [0, 1]);
         conv4 = optimizableVariable('conv4', [0, 1]);
@@ -22,15 +22,15 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
         fc6 = optimizableVariable('fc6', [0, 1]);
         fc7 = optimizableVariable('fc7', [0, 1]);
         fc8 = optimizableVariable('fc8', [0, 1]);
-        parameters = [conv1, conv2, conv3, conv4, conv5, fc6, fc7, fc8];
+        parameters = [conv2, conv3, conv4, conv5, fc6, fc7, fc8];
     elseif strcmp(network, 'resnet')
-        conv1 = optimizableVariable('conv1', [0, 1]);
+        % conv1 = optimizableVariable('conv1', [0, 1]);
         conv2 = optimizableVariable('conv2', [0, 1]);
         conv3 = optimizableVariable('conv3', [0, 1]);
         conv4 = optimizableVariable('conv4', [0, 1]);
         conv5 = optimizableVariable('conv5', [0, 1]);
         fc = optimizableVariable('fc', [0, 1]);
-        parameters = [conv1, conv2, conv3, conv4, conv5, fc];
+        parameters = [conv2, conv3, conv4, conv5, fc];
     else
         assert(true)
     end
@@ -63,10 +63,10 @@ function [objective, constraint] = constrained_bo(P, input_caffemodel, last_cons
         cbo, tradeoff_factor, network);
 
     if strcmp(network, 'alexnet')
-        kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
+        kwa = pyargs('conv1', 0, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
             'conv5', P.conv5, 'fc6', P.fc6, 'fc7', P.fc7, 'fc8', P.fc8);
     elseif strcmp(network, 'resnet')
-        kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
+        kwa = pyargs('conv1', 0, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
                     'conv5', P.conv5, 'fc', P.fc);
     else
         assert(true)
@@ -85,10 +85,10 @@ function objective = unconstrained_bo(P, input_caffemodel, last_constraint, ...
         cbo, tradeoff_factor, network);
 
     if strcmp(network, 'alexnet')
-        kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
+        kwa = pyargs('conv1', 0, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
             'conv5', P.conv5, 'fc6', P.fc6, 'fc7', P.fc7, 'fc8', P.fc8);
     elseif strcmp(network, 'resnet')
-        kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
+        kwa = pyargs('conv1', 0, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
                     'conv5', P.conv5, 'fc', P.fc);
     else
         assert(true)

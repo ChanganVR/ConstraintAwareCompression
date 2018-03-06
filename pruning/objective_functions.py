@@ -204,7 +204,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         return True
 
 
-def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=50):
+def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=100):
     start = time.time()
     output_file = 'results/test_accuracy.txt'
     command = ['build/tools/caffe.bin', 'test', '-gpu', '0', '-model', prototxt_file,
@@ -277,9 +277,11 @@ def prune(network, caffemodel_file, prototxt_file, temp_caffemodel_file, pruning
         logging.error('Fail to prune the caffemodel')
 
 
-def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=25):
-    logging.basicConfig(filename='results/test_val_acc_in_bo_iters.log', filemode='w', level=logging.INFO,
+def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=10):
+    logging.basicConfig(filename='results/test_val_acc.log', filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    logging.info('Input log file: {}'.format(log_file))
+    logging.info('Input caffemodel file: {}'.format(input_caffemodel))
     logs, constraint = read_log(log_file)
     best_acc = 0
     best_logs = []
@@ -289,17 +291,18 @@ def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=25):
             best_acc = log.accuracy
 
     iter_dict = {}
-    last_sampling_time = -25
+    last_sampled_iteration = -25
     for log in best_logs:
-        if log.sampling_time > last_sampling_time + interval:
-            prune(input_caffemodel, original_prototxt, temp_caffemodel, log.pruning_dict)
+        if log.sampled_iteration > last_sampled_iteration + interval:
+            original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+            prune('alexnet', input_caffemodel, original_prototxt, temp_caffemodel, log.pruning_dict)
             # test accuracy with validation set
             val_acc = test_accuracy(original_prototxt, temp_caffemodel, iterations=1000)
             train_acc = log.accuracy
-            iter_dict[log.sampling_time] = [train_acc, val_acc]
-            logging.info('In bo_iter {}, best result has train acc {} and val acc {:.2f}'.
-                         format(log.sampling_time, train_acc, val_acc))
-            last_sampling_time = log.sampling_time
+            iter_dict[log.sampled_iteration] = [train_acc, val_acc]
+            logging.info('In bo_iter {}, best result has train acc {:4f} and val acc {:4f}'.
+                         format(log.sampled_iteration, train_acc, val_acc))
+            last_sampled_iteration = log.sampled_iteration
 
 
 if __name__ == '__main__':

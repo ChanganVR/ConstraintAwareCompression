@@ -160,7 +160,7 @@ while t < fine_pruning_iterations:
         last_constraint = current_constraint
         logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
-
+    
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
         logs, _ = read_log(log_file=os.path.join(output_folder, str(t) + 'bo.log'))
@@ -197,6 +197,8 @@ while t < fine_pruning_iterations:
             logging.error('Cannot find the best sampled model')
         logging.info('Pruning the best sampled model in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
+
+    exit(0)
 
     if next_phase is None or next_phase == 'finetuning':
         # avoid affecting latency measurement, run fine-tuning and pruning from command line
