@@ -22,8 +22,8 @@ temp_caffemodel = 'results/temp_alexnet.caffemodel'
 test_iters = 3
 
 
-def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix,
-                              original_latency, constraint_type, constrained_bo, tradeoff_factor, network, dataset):
+def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
+                              constraint_type, constrained_bo, tradeoff_factor, network, dataset):
     objective_func = objective_function
     objective_func.input_caffemodel = input_caffemodel
     objective_func.constraint = current_constraint
