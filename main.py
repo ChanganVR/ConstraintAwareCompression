@@ -55,6 +55,7 @@ constraint_type = config.get('input', 'constraint_type')
 constraint = config.getfloat('input', 'constraint')
 constrained_bo = config.getboolean('input', 'constrained_bayesian_optimization')
 network = config.get('input', 'network')
+dataset = config.get('input', 'dataset')
 
 # constrained bayesian optimization
 fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
@@ -154,7 +155,7 @@ while t < fine_pruning_iterations:
         eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
         eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
                                   output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor,
-                                  network)
+                                  network, dataset)
         eng.quit()
 
         last_constraint = current_constraint
@@ -197,8 +198,6 @@ while t < fine_pruning_iterations:
             logging.error('Cannot find the best sampled model')
         logging.info('Pruning the best sampled model in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
-
-    exit(0)
 
     if next_phase is None or next_phase == 'finetuning':
         # avoid affecting latency measurement, run fine-tuning and pruning from command line

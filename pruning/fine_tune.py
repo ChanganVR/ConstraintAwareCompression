@@ -52,14 +52,10 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     max_iter = config.getint('fine-tuning', 'max_iter')
     base_lr = config.getfloat('fine-tuning', 'base_lr')
     momentum = config.getfloat('fine-tuning', 'momentum')
-    gamma = config.getfloat('fine-tuning', 'gamma')
-    stepsize = config.getint('fine-tuning', 'stepsize')
     test_iters = config.getint('fine-tuning', 'test_iters')
     test_interval = config.getint('fine-tuning', 'test_interval')
     disp_interval = config.getint('fine-tuning', 'disp_interval')
     step_iters = config.getint('fine-tuning', 'step_iters')
-    early_stopping_iters = config.getint('fine-tuning', 'early_stopping_iters')
-    final_finetuning = config.getboolean('fine-tuning', 'final_finetuning')
 
     # some fine-tuning parameters
     best_val_acc = 0
@@ -87,9 +83,6 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
 
     iter_cnt = 0
     while iter_cnt < max_iter:
-        # early stopping
-        if iter_cnt - best_val_iter >= early_stopping_iters:
-            break
         # test
         if iter_cnt % test_interval == 0:
             # switch net to test mode
@@ -100,7 +93,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
             if iter_cnt == 0:
                 accuracy_before = acc
             # not final fine-tuning
-            if not final_finetuning and acc >= min_acc:
+            if acc >= min_acc:
                 break
 
         # fine-tune

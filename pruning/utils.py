@@ -81,6 +81,7 @@ def read_log(log_file):
         raise IOError('Can not read log file')
 
     sampling_counter = 0
+    constraint_type = 'latency'
     constraint = None
     error_counter = 0
     for i, line in enumerate(lines):
@@ -200,6 +201,21 @@ def calculate_compression_rate(input_caffemodel, prototxt):
     print('Caffemodel non-zero density: {:4f}'.format(compression_rate))
 
 
+def plot_layerwise_pruning_param(bo_file):
+    logs, _ = read_log(bo_file)
+    layers = logs[0].pruning_dict.keys()
+    for layer in layers:
+        vals = [log.pruning_dict[layer] for log in logs]
+        iters = range(len(logs))
+        fig, ax = plt.subplots()
+        ax.plot(iters, vals, 'o')
+        ax.set_xlabel('Iteration number')
+        ax.set_ylabel('Pruning percentage')
+        ax.set_title('Percentage vs iteration in {}'.format(layer))
+        plt.show()
+
+
 if __name__ == '__main__':
     # plot_val_acc_in_bo_iters(sys.argv[1])
-    calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')
+    # calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')
+    plot_layerwise_pruning_param(sys.argv[1])

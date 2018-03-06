@@ -23,7 +23,7 @@ test_iters = 3
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix,
-                              original_latency, constraint_type, constrained_bo, tradeoff_factor, network):
+                              original_latency, constraint_type, constrained_bo, tradeoff_factor, network, dataset):
     objective_func = objective_function
     objective_func.input_caffemodel = input_caffemodel
     objective_func.constraint = current_constraint
@@ -32,6 +32,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
     objective_func.constrained_bo = constrained_bo
     objective_func.tradeoff_factor = tradeoff_factor
     objective_func.network = network
+    objective_func.dataset = dataset
 
     global original_prototxt
     global original_caffemodel
@@ -85,17 +86,24 @@ def objective_function(**pruning_dict):
     constrained_bo = objective_function.constrained_bo
     tradeoff_factor = objective_function.tradeoff_factor
     network = objective_function.network
+    dataset = objective_function.dataset
+
+    if dataset == 'imagenet':
+        test_acc_iters = 200
+    else:
+        raise NotImplementedError
 
     if constraint_type == 'latency':
         prune(network, input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
         latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
         constraint_violation = latency - constraint
-        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel)
+        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters)
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
             objective = -1 * (accuracy * 100 + tradeoff_factor * (238 - latency))
     elif constraint_type == 'compression_rate':
+        assert dataset != 'imagenet'
         compression_rate, accuracy = prune_and_test(network, input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
         constraint_violation = compression_rate - constraint
         if constrained_bo:
@@ -204,7 +212,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         return True
 
 
-def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=100):
+def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=200):
     start = time.time()
     output_file = 'results/test_accuracy.txt'
     command = ['build/tools/caffe.bin', 'test', '-gpu', '0', '-model', prototxt_file,
