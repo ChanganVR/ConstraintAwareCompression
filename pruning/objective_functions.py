@@ -103,8 +103,8 @@ def objective_function(**pruning_dict):
         else:
             objective = -1 * (accuracy * 100 + tradeoff_factor * (238 - latency))
     elif constraint_type == 'compression_rate':
-        assert dataset != 'imagenet'
-        compression_rate, accuracy = prune_and_test(network, input_caffemodel, bo_acc_prototxt, constraint, pruning_dict)
+        assert dataset == 'imagenet'
+        compression_rate, accuracy = prune_and_test(network, input_caffemodel, bo_acc_prototxt, dataset, pruning_dict)
         constraint_violation = compression_rate - constraint
         if constrained_bo:
             objective = -1 * accuracy * 100

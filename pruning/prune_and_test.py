@@ -10,8 +10,11 @@ caffe.set_device(0)
 caffe.set_mode_gpu()
 
 
-def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
-    test_iters = 50
+def prune_and_test(input_caffemodel, prototxt, dataset, pruning_dict):
+    if dataset == 'imagenet':
+        test_iters = 200
+    else:
+        raise NotImplementedError
     # read and prune caffemodel weights
     net = caffe.Net(prototxt, input_caffemodel, caffe.TEST)
     total_params = 0
@@ -45,4 +48,4 @@ def prune_and_test(input_caffemodel, prototxt, constraint, pruning_dict):
 if __name__ == '__main__':
     with open(sys.argv[4]) as fo:
         pruning_percentage_dict = json.load(fo)
-    prune_and_test(sys.argv[1], sys.argv[2], float(sys.argv[3]), pruning_percentage_dict)
+    prune_and_test(sys.argv[1], sys.argv[2], sys.argv[3], pruning_percentage_dict)
