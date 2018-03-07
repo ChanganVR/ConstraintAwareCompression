@@ -202,7 +202,8 @@ def calculate_compression_rate(input_caffemodel, prototxt):
 
 
 def plot_layerwise_pruning_param(bo_file):
-    logs, _ = read_log(bo_file)
+    logs, constraint = read_log(bo_file)
+    plot_objective_time(logs, constraint)
     layers = logs[0].pruning_dict.keys()
     for layer in layers:
         vals = [log.pruning_dict[layer] for log in logs]
@@ -213,6 +214,22 @@ def plot_layerwise_pruning_param(bo_file):
         ax.set_ylabel('Pruning percentage')
         ax.set_title('Percentage vs iteration in {}'.format(layer))
         plt.show()
+
+
+def plot_objective_time(logs, constraint):
+    fig, ax = plt.subplots()
+    objective_values = [0]
+    for log in logs:
+        if log.objective_value < objective_values[-1] and log.latency < constraint:
+            objective_values.append(log.objective_value)
+        else:
+            objective_values.append(objective_values[-1])
+    iterations = list(range(len(objective_values)))
+    ax.plot(iterations, objective_values)
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Objective values')
+    ax.set_title('Objective values vs iterations')
+    plt.show()
 
 
 if __name__ == '__main__':

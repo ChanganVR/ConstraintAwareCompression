@@ -73,9 +73,13 @@ constrained_optimization = True
 
 # some path variables
 if network == 'alexnet':
-    original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+    if dataset == 'imagenet':
+        original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
+        finetune_net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
+    elif dataset == 'dtd':
+        original_prototxt = 'models/bvlc_reference_caffenet/train_val_dtd.prototxt'
+        finetune_net = "models/bvlc_reference_caffenet/train_val_ft_dtd.prototxt"
     original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-    finetune_net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
 elif network == 'resnet':
     original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
     original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
@@ -86,14 +90,15 @@ if resume_training:
     output_folder = resume_folder
 else:
     if not constrained_bo:
-        output_folder = 'results/C_{:g}_fp_{}_bo_{}_tf_{}_{}'.format(constraint, fine_pruning_iterations,
-                                                                     bo_iters, tradeoff_factor, network)
+        output_folder = 'results/C_{:g}_fp_{}_bo_{}_tf_{}_{}_{}'.format(constraint, fine_pruning_iterations,
+                                                                        bo_iters, tradeoff_factor, network, dataset)
     elif relaxation_function != 'exponential':
-        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_{}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                     relaxation_function, network)
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_{}_{}'.format(constraint, fine_pruning_iterations, bo_iters,
+                                                                        relaxation_function, network, dataset)
     else:
-        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}_{}'.format(constraint, fine_pruning_iterations, bo_iters,
-                                                                              relaxation_function, exp_factor, network)
+        output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}_{}_{}'.format(constraint, fine_pruning_iterations,
+                                                                                 bo_iters, relaxation_function,
+                                                                                 exp_factor, network, dataset)
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')

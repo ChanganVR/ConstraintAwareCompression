@@ -47,9 +47,15 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
         original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
         original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
         model_dir = 'models/resnet'
-    bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
-    test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
-    sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl.prototxt')
+    if dataset == 'imagenet':
+        bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
+        test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
+        sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl.prototxt')
+    else:
+        original_prototxt = original_prototxt.replace('.prototxt', '_dtd.prototxt')
+        bo_acc_prototxt = os.path.join(model_dir, 'bo_acc_dtd.prototxt')
+        test_env_prototxt = os.path.join(model_dir, 'test_env_dtd.prototxt')
+        sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl_dtd.prototxt')
 
     # configure output log
     log_file = output_prefix + 'bo.log'
