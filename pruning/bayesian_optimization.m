@@ -54,6 +54,7 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
             'AcquisitionFunctionName', 'expected-improvement-plus', 'Verbose', 1, ...
             'MaxObjectiveEvaluations', n_iter, 'NumSeedPoints', init_points);
     end
+    results = 1
 end
 
 

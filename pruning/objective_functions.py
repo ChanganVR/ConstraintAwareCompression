@@ -95,7 +95,7 @@ def objective_function(**pruning_dict):
     dataset = objective_function.dataset
 
     if dataset == 'imagenet':
-        test_acc_iters = 100
+        test_acc_iters = 12
     else:
         raise NotImplementedError
 
