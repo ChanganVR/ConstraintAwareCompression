@@ -67,7 +67,10 @@ relaxation_function = config.get('cbo', 'relaxation_function')
 # fixed hyper parameters
 num_threads = 4
 batch_size = 32
-original_latency = 238
+if dataset == 'imagenet':
+    original_latency = 238
+else:
+    original_latency = 205
 init_points = 20
 constrained_optimization = True
 
@@ -96,6 +99,12 @@ else:
         output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}_{}_{}'.format(constraint, fine_pruning_iterations,
                                                                                  bo_iters, relaxation_function,
                                                                                  exp_factor, network, dataset)
+if dataset == 'dtd' and not resume_training:
+    trial = 1
+    while os.path.exists(output_folder+str(trial)):
+        trial += 1
+    output_folder = output_folder + str(trial)
+
 finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
 best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
 last_finetuned_caffemodel = os.path.join(output_folder, '0th_finetuned.caffemodel')
@@ -112,9 +121,10 @@ if resume_training:
     else:
         last_constraint = relaxed_constraint(t, relaxation_function)
     last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t-1))
-elif os.path.exists(output_folder):
-    raise IOError('{} already exist.'.format(output_folder))
 else:
+    if os.path.exists(output_folder) and dataset != 'dtd':
+            raise IOError('{} already exist.'.format(output_folder))
+
     os.mkdir(output_folder)
     if not os.path.exists(local_config):
         copyfile(config_file, local_config)

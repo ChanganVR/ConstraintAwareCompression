@@ -58,10 +58,6 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
     disp_interval = config.getint(section, 'disp_interval')
     step_iters = config.getint(section, 'step_iters')
 
-    # some fine-tuning parameters
-    best_val_acc = 0
-    best_val_iter = 0
-
     if os.path.exists(output_caffemodel):
         output_file = open(log_file, 'a+')
     else:
@@ -83,6 +79,9 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
         logging.info('Resume fine-tuning from {}'.format(output_caffemodel))
 
     iter_cnt = 0
+    accuracy_before = 0
+    best_val_acc = 0
+    best_val_iter = 0
     while iter_cnt < max_iter:
         # test
         if iter_cnt % test_interval == 0:
