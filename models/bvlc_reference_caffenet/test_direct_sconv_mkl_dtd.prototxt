@@ -22,7 +22,7 @@ layer {
 #  }
   data_param {
     source: "examples/dtd/dtd_train_val_lmdb"
-    batch_size: 256
+    batch_size: 264
     backend: LMDB
   }
 }
@@ -49,13 +49,14 @@ layer {
 #  }
   data_param {
     source: "examples/dtd/dtd_test_lmdb"
-    batch_size: 50
+    batch_size: 32 # for 44c pcl-hsw3. batch size should be a multiple of 8 to use SPMDM mode in InnerProduct layers
+    #batch_size: 256 # for pcl-knl03 (use 64 cores out of 68). batch size should be a multiple of 8 to use SPMDM mode in InnerProduct layers
     backend: LMDB
   }
 }
 layer {
   name: "conv1"
-  type: "Convolution"
+  type: "MKLConvolution"
   bottom: "data"
   top: "conv1"
   param {
@@ -68,7 +69,6 @@ layer {
   }
   convolution_param {
     num_output: 96
-    pad: 0
     kernel_size: 11
     stride: 4
     weight_filler {
@@ -83,13 +83,13 @@ layer {
 }
 layer {
   name: "relu1"
-  type: "ReLU"
+  type: "MKLReLU"
   bottom: "conv1"
   top: "conv1"
 }
 layer {
   name: "pool1"
-  type: "Pooling"
+  type: "MKLPooling"
   bottom: "conv1"
   top: "pool1"
   pooling_param {
@@ -100,7 +100,7 @@ layer {
 }
 layer {
   name: "norm1"
-  type: "LRN"
+  type: "MKLLRN"
   bottom: "pool1"
   top: "norm1"
   lrn_param {
@@ -111,7 +111,7 @@ layer {
 }
 layer {
   name: "conv2"
-  type: "Convolution"
+  type: "ConvolutionReLUPoolLRN"
   bottom: "norm1"
   top: "conv2"
   param {
@@ -135,40 +135,22 @@ layer {
       type: "constant"
       value: 1
     }
+    conv_mode: DIRECT_SCONV # direct sparse convolution
   }
-}
-layer {
-  name: "relu2"
-  type: "ReLU"
-  bottom: "conv2"
-  top: "conv2"
-}
-layer {
-  name: "pool2"
-  type: "Pooling"
-  bottom: "conv2"
-  top: "pool2"
   pooling_param {
     pool: MAX
     kernel_size: 3
     stride: 2
   }
-}
-layer {
-  name: "norm2"
-  type: "LRN"
-  bottom: "pool2"
-  top: "norm2"
   lrn_param {
-    local_size: 5
     alpha: 0.0001
     beta: 0.75
   }
 }
 layer {
   name: "conv3"
-  type: "Convolution"
-  bottom: "norm2"
+  type: "ConvolutionReLU"
+  bottom: "conv2"
   top: "conv3"
   param {
     lr_mult: 1
@@ -190,17 +172,12 @@ layer {
       type: "constant"
       value: 0
     }
+    conv_mode: DIRECT_SCONV
   }
 }
 layer {
-  name: "relu3"
-  type: "ReLU"
-  bottom: "conv3"
-  top: "conv3"
-}
-layer {
   name: "conv4"
-  type: "Convolution"
+  type: "ConvolutionReLU"
   bottom: "conv3"
   top: "conv4"
   param {
@@ -224,17 +201,12 @@ layer {
       type: "constant"
       value: 1
     }
+    conv_mode: DIRECT_SCONV
   }
 }
 layer {
-  name: "relu4"
-  type: "ReLU"
-  bottom: "conv4"
-  top: "conv4"
-}
-layer {
   name: "conv5"
-  type: "Convolution"
+  type: "ConvolutionReLUPool"
   bottom: "conv4"
   top: "conv5"
   param {
@@ -258,19 +230,8 @@ layer {
       type: "constant"
       value: 1
     }
+    conv_mode: DIRECT_SCONV
   }
-}
-layer {
-  name: "relu5"
-  type: "ReLU"
-  bottom: "conv5"
-  top: "conv5"
-}
-layer {
-  name: "pool5"
-  type: "Pooling"
-  bottom: "conv5"
-  top: "pool5"
   pooling_param {
     pool: MAX
     kernel_size: 3
@@ -279,8 +240,8 @@ layer {
 }
 layer {
   name: "fc6"
-  type: "InnerProduct"
-  bottom: "pool5"
+  type: "InnerProductReLUDropout"
+  bottom: "conv5"
   top: "fc6"
   param {
     lr_mult: 1
@@ -300,26 +261,16 @@ layer {
       type: "constant"
       value: 1
     }
+    gemm_mode: SPMDM # sparse weight matrix times dense activation matrix 
+    spmdm_transpose_out: false # skip transpose of output required for SPMDM because the next layer is also InnerProduct with SPMDM
   }
-}
-layer {
-  name: "relu6"
-  type: "ReLU"
-  bottom: "fc6"
-  top: "fc6"
-}
-layer {
-  name: "drop6"
-  type: "Dropout"
-  bottom: "fc6"
-  top: "fc6"
   dropout_param {
     dropout_ratio: 0.5
   }
 }
 layer {
   name: "fc7"
-  type: "InnerProduct"
+  type: "InnerProductReLUDropout"
   bottom: "fc6"
   top: "fc7"
   param {
@@ -340,19 +291,10 @@ layer {
       type: "constant"
       value: 1
     }
+    gemm_mode: SPMDM
+    spmdm_transpose_in: false # skip transpose of input required for SPMDM because the previous layer is also InnerProduct with SPMDM
+    spmdm_transpose_out: false # skip transpose of output required for SPMDM because the next layer is also InnerProduct with SPMDM
   }
-}
-layer {
-  name: "relu7"
-  type: "ReLU"
-  bottom: "fc7"
-  top: "fc7"
-}
-layer {
-  name: "drop7"
-  type: "Dropout"
-  bottom: "fc7"
-  top: "fc7"
   dropout_param {
     dropout_ratio: 0.5
   }
@@ -380,6 +322,8 @@ layer {
       type: "constant"
       value: 0
     }
+    gemm_mode: SPMDM
+    spmdm_transpose_in: false # skip transpose of input required for SPMDM because the previous layer is also InnerProduct with SPMDM
   }
 }
 layer {

@@ -4,7 +4,7 @@
 set -e
 
 EXAMPLE=/local-scratch/changan-home/dataset/dtd
-DATA=/local-scratch/changan-home/dataset/dtd_orig/labels
+DATA=/local-scratch/changan-home/dataset/dtd_orig/dtd_labels
 TOOLS=build/tools
 
 TRAIN_DATA_ROOT=/local-scratch/changan-home/dataset/dtd_orig/images/
@@ -42,8 +42,8 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset.bin \
     --resize_width=$RESIZE_WIDTH \
     --shuffle \
     $VAL_DATA_ROOT \
-    $DATA/test1.txt \
-    $EXAMPLE/dtd_test_lmdb
+    $DATA/test5.txt \
+    $EXAMPLE/split5/dtd_test_lmdb
 
 
 echo "Creating train_val lmdb..."
@@ -53,7 +53,7 @@ GLOG_logtostderr=1 $TOOLS/convert_imageset.bin \
     --resize_width=$RESIZE_WIDTH \
     --shuffle \
     $TRAIN_DATA_ROOT \
-    $DATA/train_val1.txt \
-    $EXAMPLE/dtd_train_val_lmdb
+    $DATA/train_val5.txt \
+    $EXAMPLE/split5/dtd_train_val_lmdb
 
 echo "Done."

@@ -49,7 +49,7 @@ layer {
 #  }
   data_param {
     source: "examples/dtd/dtd_test_lmdb"
-    batch_size: 50
+    batch_size: 32
     backend: LMDB
   }
 }

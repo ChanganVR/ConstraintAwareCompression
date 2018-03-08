@@ -48,8 +48,8 @@ layer {
 #    mirror: false
 #  }
   data_param {
-    source: "examples/dtd/dtd_test_lmdb"
-    batch_size: 50
+    source: "examples/dtd/dtd_train_val_lmdb"
+    batch_size: 400
     backend: LMDB
   }
 }

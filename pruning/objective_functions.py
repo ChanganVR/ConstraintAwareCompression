@@ -33,6 +33,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
     objective_func.tradeoff_factor = tradeoff_factor
     objective_func.network = network
     objective_func.dataset = dataset
+    objective_func.original_latency = original_latency
 
     global original_prototxt
     global original_caffemodel
@@ -43,16 +44,15 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
         original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
         original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
         model_dir = 'models/bvlc_reference_caffenet'
-    elif network == 'resnet':
-        original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
-        original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
-        model_dir = 'models/resnet'
+    else:
+        raise NotImplementedError
     if dataset == 'imagenet':
         bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
         test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
         sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl.prototxt')
     else:
         original_prototxt = original_prototxt.replace('.prototxt', '_dtd.prototxt')
+        original_caffemodel = original_caffemodel.replace('.caffemodel', '_dtd.caffemodel')
         bo_acc_prototxt = os.path.join(model_dir, 'bo_acc_dtd.prototxt')
         test_env_prototxt = os.path.join(model_dir, 'test_env_dtd.prototxt')
         sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl_dtd.prototxt')
@@ -93,9 +93,12 @@ def objective_function(**pruning_dict):
     tradeoff_factor = objective_function.tradeoff_factor
     network = objective_function.network
     dataset = objective_function.dataset
+    original_latency = objective_function.original_latency
 
     if dataset == 'imagenet':
         test_acc_iters = 12
+    elif dataset == 'dtd':
+        test_acc_iters = 10
     else:
         raise NotImplementedError
 
@@ -107,7 +110,7 @@ def objective_function(**pruning_dict):
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
-            objective = -1 * (accuracy * 100 + tradeoff_factor * (238 - latency))
+            objective = -1 * (accuracy * 100 + tradeoff_factor * (original_latency - latency))
     elif constraint_type == 'compression_rate':
         assert dataset == 'imagenet'
         compression_rate, accuracy = prune_and_test(network, input_caffemodel, bo_acc_prototxt,
@@ -205,7 +208,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
 
         logging.info('Test original caffemodel latency with normal conv:')
         test_env_latency = test_latency(test_env_prototxt, original_caffemodel, test_iters)
-        if abs(test_env_latency - original_latency) > 3:
+        if test_env_latency - original_latency > 3:
             logging.error('Test original latency is off from normal latency too much. Check the environment!')
             return False
 

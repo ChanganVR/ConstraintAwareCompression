@@ -40,22 +40,23 @@ def create_solver_file(solver_file, finetune_net, learning_rate, disp_interval, 
         fo.write('solver_mode: {}\n'.format('GPU'))
 
 
-def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, solver_file, log_file):
+def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, solver_file, log_file, dataset):
     """
-    fine-tune until one of two requirements are satisfied: acc > min_acc or iter > max_iter
+    fine-tune until iter > max_iter
     :return:
     """
     # read configuration
     config = ConfigParser.RawConfigParser()
     config.read(config_file)
-    min_acc = config.getfloat('fine-tuning', 'min_acc')
-    max_iter = config.getint('fine-tuning', 'max_iter')
-    base_lr = config.getfloat('fine-tuning', 'base_lr')
-    momentum = config.getfloat('fine-tuning', 'momentum')
-    test_iters = config.getint('fine-tuning', 'test_iters')
-    test_interval = config.getint('fine-tuning', 'test_interval')
-    disp_interval = config.getint('fine-tuning', 'disp_interval')
-    step_iters = config.getint('fine-tuning', 'step_iters')
+    section = 'fine-tuning-' + dataset
+
+    max_iter = config.getint(section, 'max_iter')
+    base_lr = config.getfloat(section, 'base_lr')
+    momentum = config.getfloat(section, 'momentum')
+    test_iters = config.getint(section, 'test_iters')
+    test_interval = config.getint(section, 'test_interval')
+    disp_interval = config.getint(section, 'disp_interval')
+    step_iters = config.getint(section, 'step_iters')
 
     # some fine-tuning parameters
     best_val_acc = 0
@@ -92,9 +93,6 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
                 best_val_iter = iter_cnt
             if iter_cnt == 0:
                 accuracy_before = acc
-            # not final fine-tuning
-            if acc >= min_acc:
-                break
 
         # fine-tune
         solver.step(step_iters)
@@ -114,5 +112,5 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
 
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 7
+    assert len(sys.argv) == 8
     fine_tune(*sys.argv[1:])

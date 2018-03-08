@@ -220,7 +220,7 @@ def plot_objective_time(logs, constraint):
     fig, ax = plt.subplots()
     objective_values = [0]
     for log in logs:
-        if log.objective_value < objective_values[-1] and log.compression_rate < constraint:
+        if log.objective_value < objective_values[-1] and log.latency < constraint:
             objective_values.append(log.objective_value)
         else:
             objective_values.append(objective_values[-1])

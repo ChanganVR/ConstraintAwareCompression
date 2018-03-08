@@ -76,14 +76,11 @@ if network == 'alexnet':
     if dataset == 'imagenet':
         original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
         finetune_net = "models/bvlc_reference_caffenet/train_val_ft.prototxt"
+        original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
     elif dataset == 'dtd':
         original_prototxt = 'models/bvlc_reference_caffenet/train_val_dtd.prototxt'
         finetune_net = "models/bvlc_reference_caffenet/train_val_ft_dtd.prototxt"
-    original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
-elif network == 'resnet':
-    original_prototxt = 'models/resnet/ResNet-50-train-val.prototxt'
-    original_caffemodel = 'models/resnet/ResNet-50-model.caffemodel'
-    finetune_net = 'models/resnet/ResNet-50-train-val-ft.prototxt'
+        original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet_dtd.caffemodel'
 else:
     raise NotImplementedError
 if resume_training:
@@ -211,7 +208,7 @@ while t < fine_pruning_iterations:
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')
         command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_net,
-                   last_finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile]
+                   last_finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset]
         os.system(' '.join(command))
         logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):
