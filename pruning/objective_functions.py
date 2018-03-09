@@ -19,7 +19,7 @@ test_env_prototxt = None
 # conv mode needs to be sparse
 sconv_prototxt = None
 temp_caffemodel = 'results/temp_alexnet.caffemodel'
-test_iters = 3
+test_latency_iters = 4
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
@@ -104,7 +104,7 @@ def objective_function(**pruning_dict):
 
     if constraint_type == 'latency':
         prune(network, input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
-        latency = test_latency(sconv_prototxt, temp_caffemodel, test_iters)
+        latency = test_latency(sconv_prototxt, temp_caffemodel, test_latency_iters)
         constraint_violation = latency - constraint
         accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters)
         if constrained_bo:
@@ -207,13 +207,13 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
 
         logging.info('Test original caffemodel latency with normal conv:')
-        test_env_latency = test_latency(test_env_prototxt, original_caffemodel, test_iters)
+        test_env_latency = test_latency(test_env_prototxt, original_caffemodel, test_latency_iters)
         if test_env_latency - original_latency > 3:
             logging.error('Test original latency is off from normal latency too much. Check the environment!')
             return False
 
         logging.info('Test input caffemodel latency with sparse conv:')
-        test_input_latency = test_latency(sconv_prototxt, input_caffemodel, test_iters)
+        test_input_latency = test_latency(sconv_prototxt, input_caffemodel, test_latency_iters)
         if test_input_latency - last_constraint > 3:
             logging.error('Test input latency is off from last constraint too much. Check the environment!')
             return False

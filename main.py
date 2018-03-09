@@ -68,9 +68,11 @@ relaxation_function = config.get('cbo', 'relaxation_function')
 num_threads = 4
 batch_size = 32
 if dataset == 'imagenet':
+    # i7-4790 CPU @ 3.60GHz
     original_latency = 238
 else:
-    original_latency = 205
+    # i7-7700 CPU @ 3.60GHz
+    original_latency = 207
 init_points = 20
 constrained_optimization = True
 
@@ -99,7 +101,7 @@ else:
         output_folder = 'results/C_{:g}_cfp_{}_bo_{}_R_{}_exp_{:g}_{}_{}'.format(constraint, fine_pruning_iterations,
                                                                                  bo_iters, relaxation_function,
                                                                                  exp_factor, network, dataset)
-if dataset == 'dtd' and not resume_training:
+if not resume_training:
     trial = 1
     while os.path.exists(output_folder+str(trial)):
         trial += 1
