@@ -234,5 +234,5 @@ def plot_objective_time(logs, constraint):
 
 if __name__ == '__main__':
     # plot_val_acc_in_bo_iters(sys.argv[1])
-    # calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')
-    plot_layerwise_pruning_param(sys.argv[1])
+    calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')
+    # plot_layerwise_pruning_param(sys.argv[1])

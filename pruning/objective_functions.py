@@ -19,7 +19,7 @@ test_env_prototxt = None
 # conv mode needs to be sparse
 sconv_prototxt = None
 temp_caffemodel = 'results/temp_alexnet.caffemodel'
-test_latency_iters = 4
+test_latency_iters = 11
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
@@ -169,7 +169,7 @@ def convert_pruning_dict(network, pruning_dict):
     return converted_pruning_dict
 
 
-def prune_and_test(network, input_caffemodel, prototxt, constraint, pruning_dict):
+def prune_and_test(network, input_caffemodel, prototxt, test_acc_iters, pruning_dict):
     # prune the input caffemodel, calculate its compression rate and accuracy on training set
     start = time.time()
     logging.info('=================================>>>Pruning starts<<<=================================')
@@ -182,7 +182,7 @@ def prune_and_test(network, input_caffemodel, prototxt, constraint, pruning_dict
     pruning_dict_file = 'results/pruning_dict.txt'
     with open(pruning_dict_file, 'w') as fo:
         json.dump(pruning_dict, fo)
-    command = ['python', 'pruning/prune_and_test.py', input_caffemodel, prototxt, str(constraint), pruning_dict_file]
+    command = ['python', 'pruning/prune_and_test.py', input_caffemodel, prototxt, str(test_acc_iters), pruning_dict_file]
     logging.debug(' '.join(command))
     ret = os.system(' '.join(command))
     if ret == 0:
@@ -267,7 +267,9 @@ def test_latency(prototxt_file, temp_caffemodel_file, test_iters):
         logging.error('Fail to read test_latency.txt')
     elif len(times) != test_iters-1:
         logging.warning('Test_latency can not find {} forwarding runs'.format(test_iters-1))
-    latency = sum(times) / len(times)
+    # enforce hard constraint, pick the maximum latency
+    logging.debug('{} runs latency measurements: {}'.format(test_iters-1, ' '.join([str(x) for x in times])))
+    latency = max(times)
 
     logging.debug('{:<30} {:.2f}'.format('Testing latency takes(s):', time.time() - start))
     logging.info('{:<30} {:.2f}'.format('Latency(ms):', latency))
