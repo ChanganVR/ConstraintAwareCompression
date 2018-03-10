@@ -74,7 +74,6 @@ else:
     # i7-7700 CPU @ 3.60GHz
     original_latency = 207
 init_points = 20
-constrained_optimization = True
 
 # some path variables
 if network == 'alexnet':
@@ -238,8 +237,7 @@ while t < fine_pruning_iterations:
         logging.info('Fine-tuning in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
 
-    if constrained_bo:
-        t += 1
+    t += 1
 
 
 

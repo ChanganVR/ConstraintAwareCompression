@@ -123,35 +123,6 @@ def read_log(log_file):
     return logs, constraint
 
 
-# def calculate_compression_rate(caffemodel_file, prototxt_file):
-#     os.environ['GLOG_minloglevel'] = '2'
-#     import caffe
-#
-#     net = caffe.Net(prototxt_file, caffemodel_file, caffe.TEST)
-#     total_parameters = 0
-#     non_zeros = 0
-#     for layer in net.params:
-#         # find the absolute threshold with percentile lower than pruning_percentage
-#         weights = net.params[layer][0].data
-#         biases = net.params[layer][1].data
-#         total_parameters += np.ma.size(weights) + np.ma.size(biases)
-#         print('Layer ', layer, total_parameters)
-#         non_zeros += np.count_nonzero(weights) + np.count_nonzero(biases)
-#
-#     return non_zeros / total_parameters
-
-
-def calculate_alexnet_compression_rate(pruning_dict):
-    layer_weights_dict = {'conv1': 34944, 'conv2': 342400, 'conv3': 1227520, 'conv4': 1891456, 'conv5': 2334080,
-                          'fc6': 40086912, 'fc7': 56868224, 'fc8': 60965224}
-    total_weights = sum(layer_weights_dict.values())
-    pruned_weights = 0
-    for layer in pruning_dict:
-        pruned_weights += layer_weights_dict[layer] * pruning_dict[layer]
-
-    return 1 - pruned_weights / total_weights
-
-
 def plot_val_acc_in_bo_iters(log_file):
     with open(log_file) as log:
         text = log.read()
@@ -201,35 +172,8 @@ def calculate_compression_rate(input_caffemodel, prototxt):
     print('Caffemodel non-zero density: {:4f}'.format(compression_rate))
 
 
-def plot_layerwise_pruning_param(bo_file):
-    logs, constraint = read_log(bo_file)
-    plot_objective_time(logs, constraint)
-    layers = logs[0].pruning_dict.keys()
-    for layer in layers:
-        vals = [log.pruning_dict[layer] for log in logs]
-        iters = range(len(logs))
-        fig, ax = plt.subplots()
-        ax.plot(iters, vals, 'o')
-        ax.set_xlabel('Iteration number')
-        ax.set_ylabel('Pruning percentage')
-        ax.set_title('Percentage vs iteration in {}'.format(layer))
-        plt.show()
-
-
-def plot_objective_time(logs, constraint):
-    fig, ax = plt.subplots()
-    objective_values = [0]
-    for log in logs:
-        if log.objective_value < objective_values[-1] and log.latency < constraint:
-            objective_values.append(log.objective_value)
-        else:
-            objective_values.append(objective_values[-1])
-    iterations = list(range(len(objective_values)))
-    ax.plot(iterations, objective_values)
-    ax.set_xlabel('Iterations')
-    ax.set_ylabel('Objective values')
-    ax.set_title('Objective values vs iterations')
-    plt.show()
+def calculate_layerwise_latency():
+    pass
 
 
 if __name__ == '__main__':
