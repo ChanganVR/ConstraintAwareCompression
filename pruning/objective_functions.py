@@ -19,7 +19,7 @@ test_env_prototxt = None
 # conv mode needs to be sparse
 sconv_prototxt = None
 temp_caffemodel = 'results/temp_alexnet.caffemodel'
-test_latency_iters = 11
+test_latency_iters = 6
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
@@ -269,7 +269,8 @@ def test_latency(prototxt_file, temp_caffemodel_file, test_iters):
         logging.warning('Test_latency can not find {} forwarding runs'.format(test_iters-1))
     # enforce hard constraint, pick the maximum latency
     logging.debug('{} runs latency measurements: {}'.format(test_iters-1, ' '.join([str(x) for x in times])))
-    latency = max(times)
+    # latency = max(times)
+    latency = sum(times) / len(times)
 
     logging.debug('{:<30} {:.2f}'.format('Testing latency takes(s):', time.time() - start))
     logging.info('{:<30} {:.2f}'.format('Latency(ms):', latency))

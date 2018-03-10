@@ -101,7 +101,7 @@ def main(file_path):
     fig_dir = os.path.join(log_dir, 'plots')
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
-    layerwise_pruning_layers = str(input('Plot layerwise pruning parameter layers: '))
+    layerwise_pruning_layers = raw_input('Plot layerwise pruning parameter layers: ')
     for i, log_file in enumerate(files):
         print('\nPlot', log_file)
         logs, constraint = read_log(log_file)
