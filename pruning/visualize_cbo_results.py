@@ -36,8 +36,8 @@ def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturati
         ax.plot(accuracies, latencies, 'ro')
     else:
         ax.scatter(accuracies, latencies, c=list(range(len(latencies))), cmap='Reds')
-    ax.set_xlabel('Accuracy')
-    ax.set_ylabel('Latency(ms)')
+    #ax.set_xlabel('Accuracy')
+    #ax.set_ylabel('Latency(ms)')
     if not title:
         # ax.set_title('Latency vs Accuracy')
         pass
@@ -45,6 +45,7 @@ def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturati
         ax.set_title(title)
     if accuracy_range is not None:
         ax.set_xlim(accuracy_range)
+    plt.xlim([0, 1])
     # plt.ylim([500, 2300])
     if prefix is not None:
         plt.savefig(prefix + '_accuracy_latency.png')
@@ -67,8 +68,8 @@ def plot_objective_time(logs, constraint, constrained_bo, prefix=None):
                 objective_values.append(objective_values[-1])
     iterations = list(range(len(objective_values)))
     ax.plot(iterations, objective_values)
-    ax.set_xlabel('Iterations')
-    ax.set_ylabel('Objective values')
+    #ax.set_xlabel('Iterations')
+    #ax.set_ylabel('Objective values')
     ax.set_title('Objective values vs iterations')
 
     if prefix is not None:
@@ -83,8 +84,8 @@ def plot_layerwise_pruning_param(logs, prefix=None):
         iters = range(len(logs))
         fig, ax = plt.subplots()
         ax.plot(iters, vals, 'o')
-        ax.set_xlabel('Iteration number')
-        ax.set_ylabel('Pruning percentage')
+        #ax.set_xlabel('Iteration number')
+        #ax.set_ylabel('Pruning percentage')
         # ax.set_title('Percentage vs iteration in {}'.format(layer))
         if prefix is not None:
             plt.savefig(prefix + '_{}.png'.format(layer))

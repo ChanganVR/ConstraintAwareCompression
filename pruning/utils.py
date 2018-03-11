@@ -191,11 +191,16 @@ def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
         for layer in layers:
             layer_dict[layer] = [float(x) for x in re.findall(r"Test time of {}\s*(\d+\.\d+) ms".format(layer), text)[1:]]
         print('{} runs test latency: {}'.format(test_iters, ' '.join([str(x) for x in total_latency])))
-        print('Min latency: {}, max latency: {}, avg latency: {}'.format(min(total_latency), max(total_latency),
-                                                                         sum(total_latency) / len(total_latency)))
-        print('Layerwise latency in max latency run:')
-        max_run = np.argmax(total_latency)
-        latencies = [layer_dict[layer][max_run] for layer in layers]
+        print('Min latency: {}, max latency: {}, avg latency: {}, stdev latency: {}'.format(min(total_latency), max(total_latency),
+                                                                                            sum(total_latency) / len(total_latency),
+                                                                                            np.std(total_latency)))
+        print('Averaged layerwise latency over {} runs:'.format(test_iters))
+        latencies = [sum(layer_dict[layer]) / len(layer_dict[layer]) for layer in layers]
+        print(('{:<10}'*len(layers)).format(*layers))
+        print(('{:<10.4f}'*len(layers)).format(*latencies))
+
+        print('STDEV of layerwise latency over {} runs:'.format(test_iters))
+        latencies = [np.std(layer_dict[layer]) for layer in layers]
         print(('{:<10}'*len(layers)).format(*layers))
         print(('{:<10.4f}'*len(layers)).format(*latencies))
 
