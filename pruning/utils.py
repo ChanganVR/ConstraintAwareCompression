@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import sys
-
+from collections import defaultdict
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -166,17 +166,43 @@ def calculate_compression_rate(input_caffemodel, prototxt):
     # print density
     layers = [layer for layer, _ in sorted(layer_dict.items())]
     pruning_percentages = [percent for _, percent in sorted(layer_dict.items())]
+    print('Layerwise compression rate:')
     print(('{:<10}'*len(layers)).format(*layers))
     print(('{:<10.4f}'*len(layers)).format(*pruning_percentages))
     compression_rate = non_zeros / total_params
     print('Caffemodel non-zero density: {:4f}'.format(compression_rate))
 
 
-def calculate_layerwise_latency():
-    pass
+def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
+    os.environ['OMP_NUM_THREADS'] = '4'
+    os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
+    output_file = 'results/test_latency.txt'
+    command = ['build/tools/caffe.bin', 'test', '-model', prototxt, '-weights', input_caffemodel,
+               '-iterations', str(test_iters+1), '>' + output_file, '2>&1']
+    logging.debug(' '.join(command))
+    os.system(' '.join(command))
+
+    with open(output_file) as fo:
+        text = fo.read()
+        layers = ['conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8']
+        # ignore the first running time due to initialization
+        total_latency = [float(x) for x in re.findall(r"Total forwarding time: (\d+\.\d+) ms", text)[1:]]
+        layer_dict = defaultdict(list)
+        for layer in layers:
+            layer_dict[layer] = [float(x) for x in re.findall(r"Test time of {}\s*(\d+\.\d+) ms".format(layer), text)[1:]]
+        print('{} runs test latency: {}'.format(test_iters, ' '.join([str(x) for x in total_latency])))
+        print('Min latency: {}, max latency: {}, avg latency: {}'.format(min(total_latency), max(total_latency),
+                                                                         sum(total_latency) / len(total_latency)))
+        print('Layerwise latency in max latency run:')
+        max_run = np.argmax(total_latency)
+        latencies = [layer_dict[layer][max_run] for layer in layers]
+        print(('{:<10}'*len(layers)).format(*layers))
+        print(('{:<10.4f}'*len(layers)).format(*latencies))
 
 
 if __name__ == '__main__':
     # plot_val_acc_in_bo_iters(sys.argv[1])
-    calculate_compression_rate(sys.argv[1], 'models/bvlc_reference_caffenet/train_val.prototxt')
-    # plot_layerwise_pruning_param(sys.argv[1])
+    input_caffemodel = sys.argv[1]
+    prototxt = sys.argv[2]
+    test_layerwise_latency(input_caffemodel, prototxt, test_iters=10)
+    calculate_compression_rate(input_caffemodel, prototxt)
