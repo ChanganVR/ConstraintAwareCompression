@@ -182,11 +182,23 @@ def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
     logging.debug(' '.join(command))
     os.system(' '.join(command))
 
+    constraint = re.findall(r"C_(\d+)", input_caffemodel)
+    if len(constraint) == 0:
+        constraint = None
+    elif len(constraint) == 1:
+        constraint = float(constraint[0])
+    else:
+        raise ValueError('More that 1 constraint')
+
     with open(output_file) as fo:
         text = fo.read()
         layers = ['conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8']
         # ignore the first running time due to initialization
         total_latency = [float(x) for x in re.findall(r"Total forwarding time: (\d+\.\d+) ms", text)[1:]]
+        if constraint is not None:
+            violation_times = sum([latency > constraint for latency in total_latency])
+            print("Number of violation for {} latency constraint is {} out of {} runs".
+                  format(constraint, violation_times, test_iters))
         layer_dict = defaultdict(list)
         for layer in layers:
             layer_dict[layer] = [float(x) for x in re.findall(r"Test time of {}\s*(\d+\.\d+) ms".format(layer), text)[1:]]
@@ -209,5 +221,5 @@ if __name__ == '__main__':
     # plot_val_acc_in_bo_iters(sys.argv[1])
     input_caffemodel = sys.argv[1]
     prototxt = sys.argv[2]
-    test_layerwise_latency(input_caffemodel, prototxt, test_iters=10)
+    test_layerwise_latency(input_caffemodel, prototxt, test_iters=100)
     calculate_compression_rate(input_caffemodel, prototxt)
