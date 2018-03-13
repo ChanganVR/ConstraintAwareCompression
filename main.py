@@ -58,11 +58,12 @@ network = config.get('input', 'network')
 dataset = config.get('input', 'dataset')
 
 # constrained bayesian optimization
+relaxation_function = config.get('cbo', 'relaxation_function')
 fine_pruning_iterations = config.getint('cbo', 'fine_pruning_iterations')
+look_ahead = config.getboolean('cbo', 'look_ahead')
 tradeoff_factor = config.getfloat('cbo', 'tradeoff_factor')
 exp_factor = config.getfloat('cbo', 'exp_factor')
 bo_iters = config.getint('cbo', 'bo_iters')
-relaxation_function = config.get('cbo', 'relaxation_function')
 
 # fixed hyper parameters
 num_threads = 4
@@ -168,7 +169,7 @@ while t < fine_pruning_iterations:
         eng.addpath('/local-scratch/changan-home/SkimCaffe/pruning')
         eng.bayesian_optimization(bo_iters, init_points, input_caffemodel, last_constraint, current_constraint,
                                   output_prefix, original_latency, constraint_type, constrained_bo, tradeoff_factor,
-                                  network, dataset)
+                                  network, dataset, look_ahead)
         eng.quit()
 
         last_constraint = current_constraint

@@ -23,7 +23,7 @@ test_latency_iters = 11
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
-                              constraint_type, constrained_bo, tradeoff_factor, network, dataset):
+                              constraint_type, constrained_bo, tradeoff_factor, network, dataset, look_ahead):
     objective_func = objective_function
     objective_func.input_caffemodel = input_caffemodel
     objective_func.constraint = current_constraint
@@ -34,6 +34,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
     objective_func.network = network
     objective_func.dataset = dataset
     objective_func.original_latency = original_latency
+    objective_func.look_ahead = look_ahead
 
     global original_prototxt
     global original_caffemodel
@@ -94,6 +95,7 @@ def objective_function(**pruning_dict):
     network = objective_function.network
     dataset = objective_function.dataset
     original_latency = objective_function.original_latency
+    look_ahead = objective_function.look_ahead
 
     if dataset == 'imagenet':
         test_acc_iters = 12
@@ -106,7 +108,9 @@ def objective_function(**pruning_dict):
         prune(network, input_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
         latency = test_latency(sconv_prototxt, temp_caffemodel, test_latency_iters)
         constraint_violation = latency - constraint
-        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters)
+        if look_ahead:
+            assert dataset == 'dtd'
+        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters, look_ahead)
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
@@ -222,9 +226,18 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         return True
 
 
-def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=200):
+def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead):
     start = time.time()
     output_file = 'results/test_accuracy.txt'
+    if look_ahead:
+        solver_file = 'models/bvlc_reference_caffenet/lookahead_ft_dtd.prototxt'
+        command = ['build/tools/caffe.bin', 'train', '-gpu', '0', '-solver', solver_file,
+                   '-weights', temp_caffemodel_file, '>'+output_file, '2>&1']
+        logging.debug(' '.join(command))
+        os.system(' '.join(command))
+        temp_caffemodel_file = 'results/lookahead_iter_15.caffemodel'
+
+    # test the accuracy
     command = ['build/tools/caffe.bin', 'test', '-gpu', '0', '-model', prototxt_file,
                '-weights', temp_caffemodel_file, '-iterations', str(iterations), '>'+output_file, '2>&1']
     logging.debug(' '.join(command))
@@ -240,8 +253,8 @@ def test_accuracy(prototxt_file, temp_caffemodel_file, iterations=200):
                 accuracy = float(line.strip().split()[-1])
                 break
 
-    if accuracy == -1:
-        logging.warning('Fail to read test_accuracy.txt')
+        if accuracy == -1:
+            logging.warning('Fail to read test_accuracy.txt')
     logging.debug('{:<30} {:.2f}'.format('Testing accuracy takes(s):', time.time() - start))
     logging.info('{:<30} {:.4f}'.format('Accuracy:', accuracy))
     return accuracy
