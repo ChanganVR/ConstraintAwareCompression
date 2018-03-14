@@ -29,15 +29,15 @@ def plot_accuracy_latency(logs, constraint, constrained_bo, title=None, saturati
     latencies = [log.latency for log in logs]
     accuracies = [log.accuracy for log in logs]
     if constrained_bo:
-        hline = ax.hlines(constraint, xmin=0, xmax=max(accuracies), linestyles='dashed', colors='blue')
+        hline = ax.hlines(constraint, xmin=0, xmax=1, linestyles='dashed', colors='blue')
         hline.set_label('Current constraint: {:.0f}'.format(int(constraint)))
-        ax.legend()
+        ax.legend(loc=1)
     if not saturation:
         ax.plot(accuracies, latencies, 'ro')
     else:
         ax.scatter(accuracies, latencies, c=list(range(len(latencies))), cmap='Reds')
-    #ax.set_xlabel('Accuracy')
-    #ax.set_ylabel('Latency(ms)')
+    ax.set_xlabel('Top-1 accuracy')
+    ax.set_ylabel('Latency(ms)')
     if not title:
         # ax.set_title('Latency vs Accuracy')
         pass
@@ -84,8 +84,8 @@ def plot_layerwise_pruning_param(logs, prefix=None):
         iters = range(len(logs))
         fig, ax = plt.subplots()
         ax.plot(iters, vals, 'o')
-        #ax.set_xlabel('Iteration number')
-        #ax.set_ylabel('Pruning percentage')
+        ax.set_xlabel('Constrained bayesian opt. iteration')
+        ax.set_ylabel('Pruning percentage')
         # ax.set_title('Percentage vs iteration in {}'.format(layer))
         if prefix is not None:
             plt.savefig(prefix + '_{}.png'.format(layer))
@@ -116,7 +116,7 @@ def main(file_path):
             print('Current constraint:', constraint)
         find_min_objective(logs, constraint, constrained_bo)
         plot_accuracy_latency(logs, constraint, constrained_bo, saturation=True, prefix=prefix)
-        plot_objective_time(logs, constraint, constrained_bo, prefix=prefix)
+        # plot_objective_time(logs, constraint, constrained_bo, prefix=prefix)
         if layerwise_pruning_layers == 'all' or str(i) in layerwise_pruning_layers:
             plot_layerwise_pruning_param(logs, prefix=prefix)
 
@@ -128,6 +128,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if not args.display:
         mpl.use('Agg')
+    import matplotlib
     from matplotlib import pyplot as plt
+    matplotlib.rc('xtick', labelsize=12)
+    matplotlib.rc('ytick', labelsize=12)
+    matplotlib.rcParams['font.size'] = 15
     from utils import read_log
     main(args.file_path)
