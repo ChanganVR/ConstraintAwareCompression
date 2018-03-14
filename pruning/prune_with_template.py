@@ -7,7 +7,7 @@ import os
 def prune(template_caffemodel, input_caffemodel, output_caffemodel, prototxt_file):
     # logging.basicConfig(filename='results/prune_debug.log', filemode='w', level=logging.DEBUG)
     # surpress log output from caffe loading
-    # os.environ['GLOG_minloglevel'] = '2'
+    os.environ['GLOG_minloglevel'] = '2'
     import caffe
     template_net = caffe.Net(prototxt_file, template_caffemodel, caffe.TEST)
     layer_dict = dict()
