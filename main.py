@@ -11,6 +11,7 @@ import ConfigParser
 import matlab.engine
 from shutil import copyfile
 from pruning.utils import find_next_phase, read_log
+from pruning.objective_functions import convert_pruning_dict
 
 
 def relaxed_constraint(iteration, relaxation_func):
@@ -216,8 +217,9 @@ while t < fine_pruning_iterations:
         # prune best point in sampled results
         start = time.time()
         pruning_dict_file = 'results/pruning_dict.txt'
+        converted_pruning_dict = convert_pruning_dict(network, max_log.pruning_dict)
         with open(pruning_dict_file, 'w') as fo:
-            json.dump(max_log.pruning_dict, fo)
+            json.dump(converted_pruning_dict, fo)
         command = ['python', 'pruning/prune.py', input_caffemodel, original_prototxt,
                    best_sampled_caffemodel, pruning_dict_file]
         os.system(' '.join(command))

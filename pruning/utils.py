@@ -29,8 +29,8 @@ class Log(object):
     def __str__(self):
         layers = [layer for layer, _ in sorted(self.pruning_dict.items())]
         pruning_percentages = [percent for _, percent in sorted(self.pruning_dict.items())]
-        string = '\n{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}'.format(*layers) + '\n'
-        string += '{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}'.format(*pruning_percentages) + '\n'
+        string = '\n'+('{:<10}'*len(layers)).format(*layers) + '\n'
+        string += ('{:<10.4f}'*len(layers)).format(*pruning_percentages) + '\n'
         string += "{:<20} {:.2f}".format('Latency:', self.latency) + '\n'
         string += "{:<20} {:.4f}".format('Compression rate:', self.compression_rate) + '\n'
         string += "{:<20} {:.4f}".format('Accuracy:', self.accuracy) + '\n'

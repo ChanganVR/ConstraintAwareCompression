@@ -16,7 +16,12 @@ def test_accuracy(iter_cnt, solver, test_iters, output_caffemodel):
     loss = 0
     for i in range(test_iters):
         solver.test_nets[0].forward()
-        accuracy += solver.test_nets[0].blobs['accuracy'].data
+        if 'accuracy' in solver.test_nets[0].blobs:
+            accuracy += solver.test_nets[0].blobs['accuracy'].data
+        elif 'top-1' in solver.test_nets[0].blobs:
+            accuracy += solver.test_nets[0].blobs['top-1'].data
+        else:
+            raise NotImplementedError
         loss += solver.test_nets[0].blobs['loss'].data
     accuracy /= test_iters
     loss /= test_iters
