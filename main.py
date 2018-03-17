@@ -79,7 +79,7 @@ if network == 'alexnet':
 elif network == 'resnet':
     batch_size = 16
     if dataset == 'imagenet':
-        original_latency = 1162
+        original_latency = 1050
     else:
         raise NotImplementedError
 
@@ -188,7 +188,7 @@ while t < fine_pruning_iterations:
         last_constraint = current_constraint
         logging.info('Bayesian optimization in {}th iteration takes {:.2f}s'.format(t, time.time()-start))
         next_phase = None
-    
+
     if next_phase is None or next_phase == 'pruning':
         # find the best point satisfying the relaxed constraints
         logs, _ = read_log(log_file=os.path.join(output_folder, str(t) + 'bo.log'))

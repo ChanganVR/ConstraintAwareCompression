@@ -65,7 +65,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
     log_file = output_prefix + 'bo.log'
     if not hasattr(objective_func, 'log_file') or objective_func.log_file != log_file:
         reload(logging)
-        logging.basicConfig(filename=log_file, filemode='w', level=logging.DEBUG,
+        logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Constraint type: {}'.format(constraint_type))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
@@ -107,7 +107,7 @@ def objective_function(**pruning_dict):
             test_acc_iters = 10
     elif network == 'resnet':
         if dataset == 'imagenet':
-            test_acc_iters = 10
+            test_acc_iters = 100
     else:
         raise NotImplementedError
 
