@@ -27,6 +27,12 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
         else
             parameters = [conv1, conv2, conv3, conv4, conv5, fc6, fc7, fc8];
         end
+    elseif strcmp(network, 'resnet')
+        conv2 = optimizableVariable('conv2', [0, 1]);
+        conv3 = optimizableVariable('conv3', [0, 1]);
+        conv4 = optimizableVariable('conv4', [0, 1]);
+        conv5 = optimizableVariable('conv5', [0, 1]);
+        parameters = [conv2, conv3, conv4, conv5];
     else
         assert(true)
     end
@@ -73,6 +79,8 @@ function [objective, constraint] = constrained_bo(P, input_caffemodel, last_cons
             kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
                 'conv5', P.conv5, 'fc6', P.fc6, 'fc7', P.fc7, 'fc8', P.fc8);
         end
+    elseif strcmp(network, 'resnet')
+        kwa = pyargs('conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, 'conv5', P.conv5);
     else
         assert(true)
     end
@@ -97,6 +105,8 @@ function objective = unconstrained_bo(P, input_caffemodel, last_constraint, ...
             kwa = pyargs('conv1', P.conv1, 'conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, ...
                 'conv5', P.conv5, 'fc6', P.fc6, 'fc7', P.fc7, 'fc8', P.fc8);
         end
+    elseif strcmp(network, 'resnet')
+        kwa = pyargs('conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, 'conv5', P.conv5);
     else
         assert(true)
     end

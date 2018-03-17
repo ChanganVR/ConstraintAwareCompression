@@ -13,7 +13,7 @@ def prune(input_caffemodel, prototxt_file, output_caffemodel, pruning_dict):
     os.environ['GLOG_minloglevel'] = '2'
     import caffe
     net = caffe.Net(prototxt_file, input_caffemodel, caffe.TEST)
-    for layer in net.params:
+    for layer in pruning_dict:
         pruning_percentage = pruning_dict[layer]
 
         # find the absolute threshold with percentile lower than pruning_percentage

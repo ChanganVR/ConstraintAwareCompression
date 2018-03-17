@@ -65,16 +65,24 @@ tradeoff_factor = config.getfloat('cbo', 'tradeoff_factor')
 exp_factor = config.getfloat('cbo', 'exp_factor')
 bo_iters = config.getint('cbo', 'bo_iters')
 
-# fixed hyper parameters
 num_threads = 4
-batch_size = 32
-if dataset == 'imagenet':
-    # i7-4790 CPU @ 3.60GHz
-    original_latency = 238
-else:
-    # i7-7700 CPU @ 3.60GHz
-    original_latency = 207
 init_points = 20
+# fixed hyper parameters
+if network == 'alexnet':
+    batch_size = 32
+    if dataset == 'imagenet':
+        # i7-4790 CPU @ 3.60GHz
+        original_latency = 238
+    else:
+        # i7-7700 CPU @ 3.60GHz
+        original_latency = 207
+elif network == 'resnet':
+    batch_size = 16
+    if dataset == 'imagenet':
+        original_latency = 1162
+    else:
+        raise NotImplementedError
+
 
 # some path variables
 if network == 'alexnet':
@@ -87,7 +95,12 @@ if network == 'alexnet':
         finetune_net = "models/bvlc_reference_caffenet/train_val_ft_dtd.prototxt"
         original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet_dtd.caffemodel'
 else:
-    raise NotImplementedError
+    if dataset == 'imagenet':
+        original_prototxt = 'models/resnet/ResNet-50-train-val_converted.prototxt'
+        finetune_net = 'models/resnet/ResNet-50-train-val_converted_ft.prototxt'
+        original_caffemodel = 'models/resnet/ResNet-50-model_converted.caffemodel'
+    elif dataset == 'dtd':
+        raise NotImplementedError
 if resume_training:
     output_folder = resume_folder
 else:

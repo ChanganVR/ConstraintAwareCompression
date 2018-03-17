@@ -6,6 +6,7 @@ import sys
 import logging
 import json
 import time
+import re
 from utils import read_log
 import numpy as np
 
@@ -18,8 +19,8 @@ bo_acc_prototxt = None
 test_env_prototxt = None
 # conv mode needs to be sparse
 sconv_prototxt = None
-temp_caffemodel = 'results/temp_alexnet.caffemodel'
-test_latency_iters = 11
+temp_caffemodel = 'results/temp_pruned.caffemodel'
+test_latency_iters = 6
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
@@ -46,7 +47,9 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
         original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
         model_dir = 'models/bvlc_reference_caffenet'
     else:
-        raise NotImplementedError
+        original_prototxt = 'models/resnet/ResNet-50-train-val_converted.prototxt'
+        original_caffemodel = 'models/resnet/ResNet-50-model_converted.caffemodel'
+        model_dir = 'models/resnet'
     if dataset == 'imagenet':
         bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
         test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
@@ -62,7 +65,7 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
     log_file = output_prefix + 'bo.log'
     if not hasattr(objective_func, 'log_file') or objective_func.log_file != log_file:
         reload(logging)
-        logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
+        logging.basicConfig(filename=log_file, filemode='w', level=logging.DEBUG,
                             format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logging.info('Constraint type: {}'.format(constraint_type))
         logging.info('Input caffemodel: {}'.format(input_caffemodel))
@@ -97,10 +100,14 @@ def objective_function(**pruning_dict):
     original_latency = objective_function.original_latency
     look_ahead = objective_function.look_ahead
 
-    if dataset == 'imagenet':
-        test_acc_iters = 12
-    elif dataset == 'dtd':
-        test_acc_iters = 10
+    if network == 'alexnet':
+        if dataset == 'imagenet':
+            test_acc_iters = 12
+        elif dataset == 'dtd':
+            test_acc_iters = 10
+    elif network == 'resnet':
+        if dataset == 'imagenet':
+            test_acc_iters = 10
     else:
         raise NotImplementedError
 
@@ -110,7 +117,7 @@ def objective_function(**pruning_dict):
         constraint_violation = latency - constraint
         if look_ahead:
             assert dataset == 'dtd'
-        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters, look_ahead)
+        accuracy = test_accuracy(bo_acc_prototxt, temp_caffemodel, test_acc_iters, look_ahead, network)
         if constrained_bo:
             objective = -1 * accuracy * 100
         else:
@@ -140,24 +147,11 @@ def convert_pruning_dict(network, pruning_dict):
         converted_pruning_dict = pruning_dict
     elif network == 'resnet':
         resnet_blocks = dict()
-        resnet_blocks['conv1'] = ['conv1']
-        resnet_blocks['conv2'] = ['res2a_branch2a', 'res2a_branch2b', 'res2a_branch2c', 'res2a_branch1',
-                                  'res2b_branch2a', 'res2b_branch2b', 'res2b_branch2c',
-                                  'res2c_branch2a', 'res2c_branch2b', 'res2c_branch2c']
-        resnet_blocks['conv3'] = ['res3a_branch2a', 'res3a_branch2b', 'res3a_branch2c', 'res3a_branch1',
-                                  'res3b_branch2a', 'res3b_branch2b', 'res3b_branch2c',
-                                  'res3c_branch2a', 'res3c_branch2b', 'res3c_branch2c',
-                                  'res3d_branch2a', 'res3d_branch2b', 'res3d_branch2c']
-        resnet_blocks['conv4'] = ['res4a_branch2a', 'res4a_branch2b', 'res4a_branch2c', 'res4a_branch1',
-                                  'res4b_branch2a', 'res4b_branch2b', 'res4b_branch2c',
-                                  'res4c_branch2a', 'res4c_branch2b', 'res4c_branch2c',
-                                  'res4d_branch2a', 'res4d_branch2b', 'res4d_branch2c',
-                                  'res4e_branch2a', 'res4e_branch2b', 'res4e_branch2c',
-                                  'res4f_branch2a', 'res4f_branch2b', 'res4f_branch2c']
-        resnet_blocks['conv5'] = ['res5a_branch2a', 'res5a_branch2b', 'res5a_branch2c', 'res5a_branch1',
-                                  'res5b_branch2a', 'res5b_branch2b', 'res5b_branch2c',
-                                  'res5c_branch2a', 'res5c_branch2b', 'res5c_branch2c']
-        resnet_blocks['fc'] = ['fc1000']
+        resnet_blocks['conv2'] = ['res2a_branch2b', 'res2b_branch2b', 'res2c_branch2b']
+        resnet_blocks['conv3'] = ['res3a_branch2b', 'res3b_branch2b', 'res3c_branch2b', 'res3d_branch2b']
+        resnet_blocks['conv4'] = ['res4a_branch2b', 'res4b_branch2b', 'res4c_branch2b', 'res4d_branch2b',
+                                  'res4e_branch2b', 'res4f_branch2b']
+        resnet_blocks['conv5'] = ['res5a_branch2b', 'res5b_branch2b', 'res5c_branch2b']
         converted_pruning_dict = dict()
         for block in resnet_blocks:
             for layer in resnet_blocks[block]:
@@ -226,7 +220,7 @@ def test_env(original_latency, input_caffemodel, last_constraint):
         return True
 
 
-def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead):
+def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead, network):
     start = time.time()
     output_file = 'results/test_accuracy.txt'
     if look_ahead:
@@ -244,17 +238,17 @@ def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead):
     os.system(' '.join(command))
 
     # read accuracy from output_file
-    accuracy = -1
     with open(output_file) as fo:
-        lines = fo.readlines()[::-1]
-        # search for lines containing "accuracy ="
-        for line in lines:
-            if 'accuracy =' in line:
-                accuracy = float(line.strip().split()[-1])
-                break
-
-        if accuracy == -1:
+        if network == 'alexnet':
+            pattern = r"accuracy = (0\.\d+)"
+        elif network == 'resnet':
+            pattern = r"top-1 = (0\.\d+)"
+        text = fo.read()
+        accuracy = re.findall(pattern, text)
+        if len(accuracy) == 0:
             logging.warning('Fail to read test_accuracy.txt')
+        else:
+            accuracy = float(accuracy[0])
     logging.debug('{:<30} {:.2f}'.format('Testing accuracy takes(s):', time.time() - start))
     logging.info('{:<30} {:.4f}'.format('Accuracy:', accuracy))
     return accuracy
@@ -270,20 +264,17 @@ def test_latency(prototxt_file, temp_caffemodel_file, test_iters):
 
     # read accuracy from output_file
     with open(output_file) as fo:
-        lines = fo.readlines()
-        # search for lines containing "accuracy =" and skip the forwarding time
-        lines = [line for line in lines if 'Total forwarding time:' in line]
-        # discard the first running, which is usually not stable
-        times = [float(line.strip().split()[-2]) for line in lines[1:]]
+        text = fo.read()
+        forwarding_time = re.findall(r"Total forwarding time: (\d+\.?\d+)", text)
+        if len(forwarding_time) != test_iters:
+            logging.error('Fail to read test_latency.txt')
+        else:
+            forwarding_time = [float(x) for x in forwarding_time[1:]]
 
-    if len(times) == 0:
-        logging.error('Fail to read test_latency.txt')
-    elif len(times) != test_iters-1:
-        logging.warning('Test_latency can not find {} forwarding runs'.format(test_iters-1))
     # enforce hard constraint, pick the maximum latency
-    logging.debug('{} runs latency measurements: {}'.format(test_iters-1, ' '.join([str(x) for x in times])))
+    logging.debug('{} runs latency measurements: {}'.format(test_iters-1, ' '.join([str(x) for x in forwarding_time])))
     # latency = max(times)
-    latency = sum(times) / len(times)
+    latency = sum(forwarding_time) / len(forwarding_time)
 
     logging.debug('{:<30} {:.2f}'.format('Testing latency takes(s):', time.time() - start))
     logging.info('{:<30} {:.2f}'.format('Latency(ms):', latency))
@@ -331,7 +322,7 @@ def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=10):
             original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
             prune('alexnet', input_caffemodel, original_prototxt, temp_caffemodel, log.pruning_dict)
             # test accuracy with validation set
-            val_acc = test_accuracy(original_prototxt, temp_caffemodel, iterations=1000)
+            val_acc = test_accuracy(original_prototxt, temp_caffemodel, iterations=1000, network='alexnet')
             train_acc = log.accuracy
             iter_dict[log.sampled_iteration] = [train_acc, val_acc]
             logging.info('In bo_iter {}, best result has train acc {:4f} and val acc {:4f}'.
