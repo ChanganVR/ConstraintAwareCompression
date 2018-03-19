@@ -6,7 +6,20 @@ import logging
 import re
 
 
-def calculate_compression_rate(input_caffemodel, prototxt):
+def layers_of_interest(network):
+    if network == 'alexnet':
+        layers = ['conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8']
+    elif network == 'resnet':
+        layers = ['res2a_branch2b', 'res2b_branch2b', 'res2c_branch2b',
+                  'res3a_branch2b', 'res3b_branch2b', 'res3c_branch2b', 'res3d_branch2b',
+                  'res4a_branch2b', 'res4b_branch2b', 'res4c_branch2b', 'res4d_branch2b', 'res4e_branch2b', 'res4f_branch2b',
+                  'res5a_branch2b', 'res5b_branch2b', 'res5c_branch2b']
+    else:
+        raise NotImplementedError
+    return layers
+
+
+def calculate_compression_rate(network, input_caffemodel, prototxt):
     os.environ['GLOG_minloglevel'] = '2'
     import caffe
 
@@ -16,7 +29,8 @@ def calculate_compression_rate(input_caffemodel, prototxt):
     non_zeros = 0
     orig_dict = dict()
     layer_dict = dict()
-    for layer in net.params:
+    layers = layers_of_interest(network)
+    for layer in layers:
         weights = net.params[layer][0].data
         biases = net.params[layer][1].data
         layer_params = np.ma.size(weights) + np.ma.size(biases)
@@ -43,7 +57,7 @@ def calculate_compression_rate(input_caffemodel, prototxt):
     print('Caffemodel non-zero density: {:4f}'.format(compression_rate))
 
 
-def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
+def test_layerwise_latency(network, input_caffemodel, prototxt, test_iters):
     os.environ['OMP_NUM_THREADS'] = '4'
     os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
     output_file = 'results/test_latency.txt'
@@ -62,7 +76,7 @@ def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
 
     with open(output_file) as fo:
         text = fo.read()
-        layers = ['conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8']
+        layers = layers_of_interest(network)
         # ignore the first running time due to initialization
         total_latency = [float(x) for x in re.findall(r"Total forwarding time: (\d+\.\d+) ms", text)[1:]]
         if constraint is not None:
@@ -73,9 +87,9 @@ def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
         for layer in layers:
             layer_dict[layer] = [float(x) for x in re.findall(r"Test time of {}\s*(\d+\.\d+) ms".format(layer), text)[1:]]
         print('{} runs test latency: {}'.format(test_iters, ' '.join([str(x) for x in total_latency])))
-        print('Min latency: {}, max latency: {}, avg latency: {}, stdev latency: {}'.format(min(total_latency), max(total_latency),
-                                                                                            sum(total_latency) / len(total_latency),
-                                                                                            np.std(total_latency)))
+        print('Min latency: {}, max latency: {}, avg latency: {}, stdev latency: {}'.
+              format(min(total_latency), max(total_latency), sum(total_latency) / len(total_latency),
+                     np.std(total_latency)))
         print('Averaged layerwise latency over {} runs:'.format(test_iters))
         latencies = [sum(layer_dict[layer]) / len(layer_dict[layer]) for layer in layers]
         print(('{:<10}'*len(layers)).format(*layers))
@@ -88,7 +102,8 @@ def test_layerwise_latency(input_caffemodel, prototxt, test_iters):
 
 
 if __name__ == '__main__':
-    input_caffemodel = sys.argv[1]
-    prototxt = sys.argv[2]
-    test_layerwise_latency(input_caffemodel, prototxt, test_iters=100)
-    calculate_compression_rate(input_caffemodel, prototxt)
+    network = sys.argv[1]
+    input_caffemodel = sys.argv[2]
+    prototxt = sys.argv[3]
+    test_layerwise_latency(network, input_caffemodel, prototxt, test_iters=20)
+    calculate_compression_rate(network, input_caffemodel, prototxt)
