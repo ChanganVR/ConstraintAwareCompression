@@ -33,6 +33,18 @@ function results = bayesian_optimization(n_iter, init_points, input_caffemodel, 
         conv4 = optimizableVariable('conv4', [0, 1]);
         conv5 = optimizableVariable('conv5', [0, 1]);
         parameters = [conv2, conv3, conv4, conv5];
+    elseif strcmp(network, 'googlenet')
+        conv2 = optimizableVariable('conv2', [0, 1]);
+        i3a = optimizableVariable('i3a', [0, 1]);
+        i3b = optimizableVariable('i3b', [0, 1]);
+        i4a = optimizableVariable('i4a', [0, 1]);
+        i4b = optimizableVariable('i4b', [0, 1]);
+        i4c = optimizableVariable('i4c', [0, 1]);
+        i4d = optimizableVariable('i4d', [0, 1]);
+        i4e = optimizableVariable('i4e', [0, 1]);
+        i5a = optimizableVariable('i5a', [0, 1]);
+        i5b = optimizableVariable('i5b', [0, 1]);
+        parameters = [conv2, i3a, i3b, i4a, i4b, i4c, i4d, i4e, i5a, i5b];
     else
         assert(true)
     end
@@ -81,6 +93,9 @@ function [objective, constraint] = constrained_bo(P, input_caffemodel, last_cons
         end
     elseif strcmp(network, 'resnet')
         kwa = pyargs('conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, 'conv5', P.conv5);
+    elseif strcmp(network, 'googlenet')
+        kwa = pyargs('conv2', P.conv2, 'i3a', P.i3a, 'i3b', P.i3b, 'i4a', P.i4a, 'i4b', P.i4b, 'i4c', P.i4c, ...
+                     'i4d', P.i4d, 'i4e', P.i4e, 'i5a', P.i5a, 'i5b', P.i5b);
     else
         assert(true)
     end
@@ -107,6 +122,9 @@ function objective = unconstrained_bo(P, input_caffemodel, last_constraint, ...
         end
     elseif strcmp(network, 'resnet')
         kwa = pyargs('conv2', P.conv2, 'conv3', P.conv3, 'conv4', P.conv4, 'conv5', P.conv5);
+    elseif strcmp(network, 'googlenet')
+        kwa = pyargs('conv2', P.conv2, 'i3a', P.i3a, 'i3b', P.i3b, 'i4a', P.i4a, 'i4b', P.i4b, 'i4c', P.i4c, ...
+                     'i4d', P.i4d, 'i4e', P.i4e, 'i5a', P.i5a, 'i5b', P.i5b);
     else
         assert(true)
     end

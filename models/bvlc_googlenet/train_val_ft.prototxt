@@ -17,7 +17,7 @@ layer {
   data_param {
     source: "examples/imagenet/ilsvrc12_train_lmdb"
     #batch_size: 128 # originally 32, could've used 256 but reduced to 64 for 4 GPUs
-    batch_size: 96 # reduced from 128 because we're getting out-of-memory error in pcl-gpu2
+    batch_size: 32 # reduced from 128 because we're getting out-of-memory error in pcl-gpu2
     backend: LMDB
   }
 }
@@ -38,7 +38,7 @@ layer {
   }
   data_param {
     source: "examples/imagenet/ilsvrc12_val_lmdb"
-    batch_size: 50
+    batch_size: 44
     backend: LMDB
   }
 }
@@ -875,7 +875,6 @@ layer {
   type: "InnerProduct"
   bottom: "loss1/conv"
   top: "loss1/fc"
-  connectivity_mode: DISCONNECTED_ELTWISE
   param {
     lr_mult: 1
     decay_mult: 1
@@ -915,7 +914,6 @@ layer {
   type: "InnerProduct"
   bottom: "loss1/fc"
   top: "loss1/classifier"
-  connectivity_mode: DISCONNECTED_ELTWISE
   param {
     lr_mult: 1
     decay_mult: 1
@@ -1646,7 +1644,6 @@ layer {
   type: "InnerProduct"
   bottom: "loss2/conv"
   top: "loss2/fc"
-  connectivity_mode: DISCONNECTED_ELTWISE
   param {
     lr_mult: 1
     decay_mult: 1
@@ -1686,7 +1683,6 @@ layer {
   type: "InnerProduct"
   bottom: "loss2/fc"
   top: "loss2/classifier"
-  connectivity_mode: DISCONNECTED_ELTWISE
   param {
     lr_mult: 1
     decay_mult: 1
@@ -2406,7 +2402,6 @@ layer {
   type: "InnerProduct"
   bottom: "pool5/7x7_s1"
   top: "loss3/classifier"
-  connectivity_mode: DISCONNECTED_ELTWISE
   param {
     lr_mult: 1
     decay_mult: 1

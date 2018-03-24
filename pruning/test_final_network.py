@@ -14,6 +14,13 @@ def layers_of_interest(network):
                   'res3a_branch2b', 'res3b_branch2b', 'res3c_branch2b', 'res3d_branch2b',
                   'res4a_branch2b', 'res4b_branch2b', 'res4c_branch2b', 'res4d_branch2b', 'res4e_branch2b', 'res4f_branch2b',
                   'res5a_branch2b', 'res5b_branch2b', 'res5c_branch2b']
+    elif network == 'googlenet':
+        layers = ['conv2/3x3',
+                  'inception_3a/3x3', 'inception_3a/5x5', 'inception_3b/3x3', 'inception_3b/5x5',
+                  'inception_4a/3x3', 'inception_4a/5x5', 'inception_4b/3x3', 'inception_4b/5x5',
+                  'inception_4c/3x3', 'inception_4c/5x5', 'inception_4d/3x3', 'inception_4d/5x5',
+                  'inception_4e/3x3', 'inception_4e/5x5', 'inception_5a/3x3', 'inception_5a/5x5',
+                  'inception_5b/3x3', 'inception_5b/5x5']
     else:
         raise NotImplementedError
     return layers

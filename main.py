@@ -83,6 +83,14 @@ elif network == 'resnet':
         original_latency = 1050
     else:
         raise NotImplementedError
+elif network == 'googlenet':
+    batch_size = 16
+    if dataset == 'imagenet':
+        original_latency = 325
+    else:
+        raise NotImplementedError
+else:
+    raise NotImplementedError
 
 
 # some path variables
@@ -95,13 +103,22 @@ if network == 'alexnet':
         original_prototxt = 'models/bvlc_reference_caffenet/train_val_dtd.prototxt'
         finetune_net = "models/bvlc_reference_caffenet/train_val_ft_dtd.prototxt"
         original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet_dtd.caffemodel'
-else:
+elif network == 'resnet':
     if dataset == 'imagenet':
         original_prototxt = 'models/resnet/ResNet-50-train-val_converted.prototxt'
         finetune_net = 'models/resnet/ResNet-50-train-val_converted_ft.prototxt'
         original_caffemodel = 'models/resnet/ResNet-50-model_converted.caffemodel'
-    elif dataset == 'dtd':
+    else:
         raise NotImplementedError
+elif network == 'googlenet':
+    if dataset == 'imagenet':
+        original_prototxt = 'models/bvlc_googlenet/train_val.prototxt'
+        finetune_net = 'models/bvlc_googlenet/train_val_ft.prototxt'
+        original_caffemodel = 'models/bvlc_googlenet/bvlc_googlenet.caffemodel'
+    else:
+        raise NotImplementedError
+else:
+    raise NotImplementedError
 if resume_training:
     output_folder = resume_folder
 else:

@@ -20,7 +20,7 @@ test_env_prototxt = None
 # conv mode needs to be sparse
 sconv_prototxt = None
 temp_caffemodel = 'results/temp_pruned.caffemodel'
-test_latency_iters = 6
+test_latency_iters = 11
 
 
 def matlab_objective_function(input_caffemodel, last_constraint, current_constraint, output_prefix, original_latency,
@@ -46,10 +46,17 @@ def matlab_objective_function(input_caffemodel, last_constraint, current_constra
         original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
         original_caffemodel = 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
         model_dir = 'models/bvlc_reference_caffenet'
-    else:
+    elif network == 'resnet':
         original_prototxt = 'models/resnet/ResNet-50-train-val_converted.prototxt'
         original_caffemodel = 'models/resnet/ResNet-50-model_converted.caffemodel'
         model_dir = 'models/resnet'
+    elif network == 'googlenet':
+        original_prototxt = 'models/bvlc_googlenet/train_val.prototxt'
+        original_caffemodel = 'models/bvlc_googlenet/bvlc_googlenet.caffemodel'
+        model_dir = 'models/bvlc_googlenet'
+    else:
+        raise NotImplementedError
+
     if dataset == 'imagenet':
         bo_acc_prototxt = os.path.join(model_dir, 'bo_acc.prototxt')
         test_env_prototxt = os.path.join(model_dir, 'test_env.prototxt')
@@ -108,6 +115,9 @@ def objective_function(**pruning_dict):
     elif network == 'resnet':
         if dataset == 'imagenet':
             test_acc_iters = 100
+    elif network == 'googlenet':
+        if dataset == 'imagenet':
+            test_acc_iters = 12
     else:
         raise NotImplementedError
 
@@ -155,6 +165,22 @@ def convert_pruning_dict(network, pruning_dict):
         converted_pruning_dict = dict()
         for block in resnet_blocks:
             for layer in resnet_blocks[block]:
+                converted_pruning_dict[layer] = pruning_dict[block]
+    elif network == 'googlenet':
+        inception_blocks = dict()
+        inception_blocks['conv2'] = ['conv2/3x3']
+        inception_blocks['i3a'] = ['inception_3a/3x3', 'inception_3a/5x5']
+        inception_blocks['i3b'] = ['inception_3b/3x3', 'inception_3b/5x5']
+        inception_blocks['i4a'] = ['inception_4a/3x3', 'inception_4a/5x5']
+        inception_blocks['i4b'] = ['inception_4b/3x3', 'inception_4b/5x5']
+        inception_blocks['i4c'] = ['inception_4c/3x3', 'inception_4c/5x5']
+        inception_blocks['i4d'] = ['inception_4d/3x3', 'inception_4d/5x5']
+        inception_blocks['i4e'] = ['inception_4e/3x3', 'inception_4e/5x5']
+        inception_blocks['i5a'] = ['inception_5a/3x3', 'inception_5a/5x5']
+        inception_blocks['i5b'] = ['inception_5b/3x3', 'inception_5b/5x5']
+        converted_pruning_dict = dict()
+        for block in inception_blocks:
+            for layer in inception_blocks[block]:
                 converted_pruning_dict[layer] = pruning_dict[block]
     else:
         raise NotImplementedError
@@ -243,6 +269,8 @@ def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead, n
             pattern = r"accuracy = (0\.\d+)"
         elif network == 'resnet':
             pattern = r"top-1 = (0\.\d+)"
+        elif network == 'googlenet':
+            pattern = r"loss3/top-1 = (0\.\d+)"
         text = fo.read()
         accuracy = re.findall(pattern, text)
         if len(accuracy) == 0:
@@ -302,33 +330,5 @@ def prune(network, caffemodel_file, prototxt_file, temp_caffemodel_file, pruning
         logging.error('Fail to prune the caffemodel')
 
 
-def test_val_acc_in_bo_iters(log_file, input_caffemodel, interval=10):
-    logging.basicConfig(filename='results/test_val_acc.log', filemode='w', level=logging.INFO,
-                        format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-    logging.info('Input log file: {}'.format(log_file))
-    logging.info('Input caffemodel file: {}'.format(input_caffemodel))
-    logs, constraint = read_log(log_file)
-    best_acc = 0
-    best_logs = []
-    for log in logs:
-        if log.accuracy > best_acc and log.latency < constraint:
-            best_logs.append(log)
-            best_acc = log.accuracy
-
-    iter_dict = {}
-    last_sampled_iteration = -25
-    for log in best_logs:
-        if log.sampled_iteration > last_sampled_iteration + interval:
-            original_prototxt = 'models/bvlc_reference_caffenet/train_val.prototxt'
-            prune('alexnet', input_caffemodel, original_prototxt, temp_caffemodel, log.pruning_dict)
-            # test accuracy with validation set
-            val_acc = test_accuracy(original_prototxt, temp_caffemodel, iterations=1000, network='alexnet')
-            train_acc = log.accuracy
-            iter_dict[log.sampled_iteration] = [train_acc, val_acc]
-            logging.info('In bo_iter {}, best result has train acc {:4f} and val acc {:4f}'.
-                         format(log.sampled_iteration, train_acc, val_acc))
-            last_sampled_iteration = log.sampled_iteration
-
-
 if __name__ == '__main__':
-    test_val_acc_in_bo_iters(sys.argv[1], sys.argv[2])
+    pass
