@@ -84,9 +84,9 @@ elif network == 'resnet':
     else:
         raise NotImplementedError
 elif network == 'googlenet':
-    batch_size = 16
+    batch_size = 32
     if dataset == 'imagenet':
-        original_latency = 325
+        original_latency = 524
     else:
         raise NotImplementedError
 else:

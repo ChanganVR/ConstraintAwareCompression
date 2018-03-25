@@ -117,7 +117,7 @@ def objective_function(**pruning_dict):
             test_acc_iters = 100
     elif network == 'googlenet':
         if dataset == 'imagenet':
-            test_acc_iters = 12
+            test_acc_iters = 20
     else:
         raise NotImplementedError
 

@@ -37,7 +37,7 @@ layer {
   }
   data_param {
     source: "examples/imagenet/ilsvrc12_train_lmdb"
-    batch_size: 400 # for 44c pcl-hsw3
+    batch_size: 150 # for 44c pcl-hsw3
     backend: LMDB
   }
 }
