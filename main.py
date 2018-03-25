@@ -252,7 +252,7 @@ while t < fine_pruning_iterations:
         last_finetuned_caffemodel = os.path.join(output_folder, '{}th_finetuned.caffemodel'.format(t))
         finetuning_logfile = last_finetuned_caffemodel.replace('caffemodel', 'log')
         command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_net,
-                   last_finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset]
+                   last_finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset, network]
         os.system(' '.join(command))
         logging.debug(' '.join(command))
         if not os.path.exists(last_finetuned_caffemodel):

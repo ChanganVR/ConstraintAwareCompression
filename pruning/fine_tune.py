@@ -108,7 +108,12 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
 
         # fine-tune
         solver.step(step_iters)
-        loss = solver.net.blobs['loss'].data
+        if network == 'alexnet' or network == 'resnet':
+            loss = solver.net.blobs['loss'].data
+        elif network == 'googlenet':
+            loss = solver.net.blobs['loss3/loss3'].data
+        else:
+            raise NotImplementedError
         iter_cnt += step_iters
         if iter_cnt % disp_interval == 0 or iter_cnt == max_iter:
             logging.info('Training iteration {}, loss: {:.2f}'.format(iter_cnt, loss))

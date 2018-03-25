@@ -17,7 +17,7 @@ layer {
   data_param {
     source: "examples/imagenet/ilsvrc12_train_lmdb"
     #batch_size: 128 # originally 32, could've used 256 but reduced to 64 for 4 GPUs
-    batch_size: 32 # reduced from 128 because we're getting out-of-memory error in pcl-gpu2
+    batch_size: 50 # reduced from 128 because we're getting out-of-memory error in pcl-gpu2
     backend: LMDB
   }
 }
