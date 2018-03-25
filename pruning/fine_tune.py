@@ -10,19 +10,27 @@ caffe.set_device(0)
 caffe.set_mode_gpu()
 
 
-def test_accuracy(iter_cnt, solver, test_iters, output_caffemodel):
+def test_accuracy(iter_cnt, solver, test_iters, output_caffemodel, network):
     solver.test_nets[0].share_with(solver.net)
     accuracy = 0
     loss = 0
     for i in range(test_iters):
         solver.test_nets[0].forward()
-        if 'accuracy' in solver.test_nets[0].blobs:
+        if network == 'alexnet':
             accuracy += solver.test_nets[0].blobs['accuracy'].data
-        elif 'top-1' in solver.test_nets[0].blobs:
+        elif network == 'resnet':
             accuracy += solver.test_nets[0].blobs['top-1'].data
+        elif network == 'googlenet':
+            accuracy += solver.test_nets[0].blobs['loss3/top-1'].data
         else:
             raise NotImplementedError
-        loss += solver.test_nets[0].blobs['loss'].data
+
+        if network == 'alexnet' or network == 'resnet':
+            loss += solver.test_nets[0].blobs['loss'].data
+        elif network == 'googlenet':
+            loss += solver.test_nets[0].blobs['loss3/loss3'].data
+        else:
+            raise NotImplementedError
     accuracy /= test_iters
     loss /= test_iters
     logging.info('Test in iteration {}, accuracy: {:.4f}, loss: {:.2f}'.format(iter_cnt, accuracy, loss))
@@ -45,7 +53,7 @@ def create_solver_file(solver_file, finetune_net, learning_rate, disp_interval, 
         fo.write('solver_mode: {}\n'.format('GPU'))
 
 
-def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, solver_file, log_file, dataset):
+def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, solver_file, log_file, dataset, network):
     """
     fine-tune until iter > max_iter
     :return:
@@ -91,7 +99,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
         # test
         if iter_cnt % test_interval == 0:
             # switch net to test mode
-            acc = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+            acc = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel, network)
             if acc > best_val_acc:
                 best_val_acc = acc
                 best_val_iter = iter_cnt
@@ -106,7 +114,7 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
             logging.info('Training iteration {}, loss: {:.2f}'.format(iter_cnt, loss))
 
     # test final accuracy
-    accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel)
+    accuracy_after = test_accuracy(iter_cnt, solver, test_iters, output_caffemodel, network)
     logging.info('Accuracy before: {:.4f}'.format(accuracy_before))
     logging.info('Accuracy after: {:.4f}'.format(accuracy_after))
     logging.info('Best validation accuracy {:.4f} in iterations {}'.format(best_val_acc, best_val_iter))
@@ -116,5 +124,5 @@ def fine_tune(input_caffemodel, finetune_net, output_caffemodel, config_file, so
 
 
 if __name__ == '__main__':
-    assert len(sys.argv) == 8
+    assert len(sys.argv) == 9
     fine_tune(*sys.argv[1:])
