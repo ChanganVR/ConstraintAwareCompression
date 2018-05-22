@@ -25,7 +25,7 @@ def check_constraint(constraint, pruning_percentage):
     pruning_dict = {layer: pruning_percentage for layer in ['conv2', 'conv3', 'conv4', 'conv5',
                                                             'fc6', 'fc7', 'fc8']}
     prune(network, original_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
-    latency = test_latency(original_prototxt, temp_caffemodel, test_latency_iters)
+    latency = test_latency(sconv_prototxt, temp_caffemodel, test_latency_iters)
     return latency < constraint
 
 
@@ -38,10 +38,11 @@ def binary_search(constraint, interval):
         satisfied = check_constraint(constraint, mid)
         if satisfied:
             right = mid
-            logging.info('Pruning percentage {} satisfy the constraint'.format(mid))
         else:
             left = mid
-            logging.info('Pruning percentage {} does not satisfy the constraint'.foramt(mid))
+
+    if right == 1:
+        logging.error('Solution not found')
 
     return right
 
@@ -104,8 +105,8 @@ def parse_config_file(config_file):
             # i7-4790 CPU @ 3.60GHz
             original_latency = 238
         else:
-            # i7-7700 CPU @ 3.60GHz 207
-            original_latency = 240
+            # i7-7700 CPU @ 3.6original_latenci0GHz 207
+            original_latency = 238
     else:
         assert True
 
@@ -113,11 +114,11 @@ def parse_config_file(config_file):
 
 
 def main():
-    interval = 0.1
+    interval = 0.001
     config_file = 'cfp.config'
 
     constraint, original_latency =  parse_config_file(config_file)
-    output_folder = 'results/B_{}_interval_{}_{}'.format(constraint, interval, dataset)
+    output_folder = 'results/B_{:.0f}_interval_{}_{}'.format(constraint, interval, dataset)
 
     trial = 1
     while os.path.exists(output_folder+str(trial)):
@@ -140,7 +141,7 @@ def main():
         logging.warning('Environment abnormal. Sleep for 3 seconds')
         time.sleep(3)
 
-    pruning_percentage = binary_search(original_latency, constraint)
+    pruning_percentage = binary_search(constraint, interval)
     prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuning_logfile)
 
 
