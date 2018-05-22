@@ -29,18 +29,19 @@ def check_constraint(constraint, pruning_percentage):
     return latency < constraint
 
 
-def binary_search(original_latency, constraint):
+def binary_search(constraint, interval):
     left = 0.5
     right = 1
-    interval = 0.001
 
     while right - left > interval:
         mid = (left+right)/2
         satisfied = check_constraint(constraint, mid)
         if satisfied:
             right = mid
+            logging.info('Pruning percentage {} satisfy the constraint'.format(mid))
         else:
             left = mid
+            logging.info('Pruning percentage {} does not satisfy the constraint'.foramt(mid))
 
     return right
 
@@ -67,17 +68,7 @@ def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_s
     logging.info('Number of iterations: {}'.format(total_iterations))
 
 
-def main():
-    output_folder = 'results/unconstrained_binary_search'
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-    config_file = 'cfp.config'
-    local_config = os.path.join(output_folder, os.path.basename(config_file))
-    copyfile(config_file, local_config)
-    finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
-    best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
-    finetuning_logfile = os.path.join(output_folder, 'finetuning.log')
-
+def parse_config_file(config_file):
     global original_prototxt
     global original_caffemodel
     global test_env_prototxt
@@ -113,10 +104,37 @@ def main():
             # i7-4790 CPU @ 3.60GHz
             original_latency = 238
         else:
-            # i7-7700 CPU @ 3.60GHz
+            # i7-7700 CPU @ 3.60GHz 207
             original_latency = 240
     else:
         assert True
+
+    return constraint, original_latency
+
+
+def main():
+    interval = 0.1
+    config_file = 'cfp.config'
+
+    constraint, original_latency =  parse_config_file(config_file)
+    output_folder = 'results/B_{}_interval_{}_{}'.format(constraint, interval, dataset)
+
+    trial = 1
+    while os.path.exists(output_folder+str(trial)):
+        trial += 1
+    output_folder = output_folder + str(trial)
+
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+
+    local_config = os.path.join(output_folder, os.path.basename(config_file))
+    copyfile(config_file, local_config)
+    finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
+    best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
+    finetuning_logfile = os.path.join(output_folder, 'finetuning.log')
+    log_file = os.path.join(output_folder, 'binary_search.log')
+    logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
+                        format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
     while not test_env(original_latency, original_caffemodel, 10000):
         logging.warning('Environment abnormal. Sleep for 3 seconds')
