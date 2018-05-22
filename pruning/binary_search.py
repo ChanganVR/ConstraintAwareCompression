@@ -6,10 +6,12 @@ import re
 import ConfigParser
 from shutil import copyfile
 import caffe
-from objective_functions import prune, test_latency, test_env
+from objective_functions import prune, test_latency
 
 
 temp_caffemodel = 'results/temp_pruned.caffemodel'
+test_latency_iters = 11
+
 original_prototxt = None
 original_caffemodel = None
 test_env_prototxt = None
@@ -19,27 +21,22 @@ network = None
 dataset = None
 
 
-def check_constraint(constraint, pruning_percentage, test_iters):
+def check_constraint(constraint, pruning_percentage):
     pruning_dict = {layer: pruning_percentage for layer in ['conv2', 'conv3', 'conv4', 'conv5',
                                                             'fc6', 'fc7', 'fc8']}
     prune(network, original_caffemodel, original_prototxt, temp_caffemodel, pruning_dict)
-    latency = test_latency(original_prototxt, temp_caffemodel, test_iters)
+    latency = test_latency(original_prototxt, temp_caffemodel, test_latency_iters)
     return latency < constraint
 
 
 def binary_search(original_latency, constraint):
-    test_iters = 11
     left = 0.5
     right = 1
     interval = 0.001
 
-    while not test_env(original_latency, original_caffemodel, 10000):
-        logging.warning('Environment abnormal. Sleep for 3 seconds')
-        time.sleep(3)
-
     while right - left > interval:
         mid = (left+right)/2
-        satisfied = check_constraint(constraint, mid, test_iters)
+        satisfied = check_constraint(constraint, mid)
         if satisfied:
             right = mid
         else:
@@ -71,13 +68,23 @@ def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_s
 
 
 def main():
-    output_folder = 'result/unconstrained_binary_search'
+    output_folder = 'results/unconstrained_binary_search'
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
     config_file = 'cfp.config'
     local_config = os.path.join(output_folder, os.path.basename(config_file))
     copyfile(config_file, local_config)
     finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
     best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
     finetuning_logfile = os.path.join(output_folder, 'finetuning.log')
+
+    global original_prototxt
+    global original_caffemodel
+    global test_env_prototxt
+    global sconv_prototxt
+    global finetune_net
+    global network
+    global dataset
 
     config = ConfigParser.RawConfigParser()
     config.read(config_file)
@@ -101,26 +108,45 @@ def main():
         test_env_prototxt = os.path.join(model_dir, 'test_env_dtd.prototxt')
         sconv_prototxt = os.path.join(model_dir, 'test_direct_sconv_mkl_dtd.prototxt')
 
-    global original_prototxt
-    global original_caffemodel
-    global test_env_prototxt
-    global sconv_prototxt
-    global finetune_net
-    global network
-    global dataset
-
     if network == 'alexnet':
         if dataset == 'imagenet':
             # i7-4790 CPU @ 3.60GHz
             original_latency = 238
         else:
             # i7-7700 CPU @ 3.60GHz
-            original_latency = 207
+            original_latency = 240
     else:
         assert True
 
+    while not test_env(original_latency, original_caffemodel, 10000):
+        logging.warning('Environment abnormal. Sleep for 3 seconds')
+        time.sleep(3)
+
     pruning_percentage = binary_search(original_latency, constraint)
     prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuning_logfile)
+
+
+def test_env(original_latency, input_caffemodel, last_constraint):
+    os.environ['OMP_NUM_THREADS'] = '4'
+    os.environ['KMP_AFFINITY'] = 'granularity=fine,compact,1'
+    os.environ['LD_LIBRARY_PATH'] = '/local-scratch/changan-home/lib/boost/lib:/local-scratch/changan-home/intel/itac/2018.1.017/intel64/slib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/lib/boost/lib:/local-scratch/changan-home/intel/itac/2018.1.017/intel64/slib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mpi/mic/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/ipp/lib/intel64:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/tbb/lib/intel64/gcc4.7:/local-scratch/changan-home/intel/debugger_2018/iga/lib:/local-scratch/changan-home/intel/debugger_2018/libipt/intel64/lib:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/lib/intel64_lin:/local-scratch/changan-home/intel/compilers_and_libraries_2018.1.163/linux/daal/../tbb/lib/intel64_lin/gcc4.4:/usr/local-linux/lib'
+
+    logging.info('=================================>>>Test environment<<<=================================')
+    logging.info('{:<30} {}'.format('Original latency(ms):', original_latency))
+
+    logging.info('Test original caffemodel latency with normal conv:')
+    test_env_latency = test_latency(test_env_prototxt, original_caffemodel, test_latency_iters)
+    if test_env_latency - original_latency > 3:
+        logging.error('Test original latency is off from normal latency too much. Check the environment!')
+        return False
+
+    logging.info('Test input caffemodel latency with sparse conv:')
+    test_input_latency = test_latency(sconv_prototxt, input_caffemodel, test_latency_iters)
+    if test_input_latency - last_constraint > 3:
+        logging.error('Test input latency is off from last constraint too much. Check the environment!')
+        return False
+
+    return True
 
 
 if __name__ == '__main__':
