@@ -29,30 +29,42 @@ def check_constraint(constraint, pruning_percentage):
     return latency < constraint
 
 
+# def binary_search(constraint, interval):
+#     left = 0.5
+#     right = 1
+#
+#     while right - left > interval:
+#         mid = (left+right)/2
+#         satisfied = check_constraint(constraint, mid)
+#         if satisfied:
+#             right = mid
+#         else:
+#             left = mid
+#
+#     if right == 1:
+#         logging.error('Solution not found')
+#
+#     return right
+
+
 def binary_search(constraint, interval):
     left = 0.5
     right = 1
 
-    while right - left > interval:
+    while right - left > 0.01:
         mid = (left+right)/2
         satisfied = check_constraint(constraint, mid)
         if satisfied:
-            right = mid
+            return mid
         else:
             left = mid
 
-    if right == 1:
-        logging.error('Solution not found')
-
-    return right
+    return -1
 
 
 def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuned_caffemodel, finetuning_logfile):
-    pruning_dict = {layer: pruning_percentage for layer in ['conv2', 'conv3', 'conv4', 'conv5',
-                                                            'fc6', 'fc7', 'fc8']}
+    pruning_dict = {layer: pruning_percentage for layer in ['conv2', 'conv3', 'conv4', 'conv5', 'fc6', 'fc7', 'fc8']}
     prune(network, original_caffemodel, original_prototxt, best_sampled_caffemodel, pruning_dict)
-
-    return
 
     command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_net,
                finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset, network]
@@ -147,6 +159,8 @@ def main():
         time.sleep(3)
 
     pruning_percentage = binary_search(constraint, interval)
+    if pruning_percentage == -1:
+        logging.error('Could find the solution')
     prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuned_caffemodel, finetuning_logfile)
 
 
