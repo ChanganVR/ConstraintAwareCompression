@@ -47,15 +47,18 @@ def binary_search(constraint, interval):
     return right
 
 
-def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuning_logfile):
+def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuned_caffemodel, finetuning_logfile):
     pruning_dict = {layer: pruning_percentage for layer in ['conv2', 'conv3', 'conv4', 'conv5',
                                                             'fc6', 'fc7', 'fc8']}
-    prune(network, original_caffemodel, original_prototxt, 'best_sampled.caffemodel', pruning_dict)
-    command = ['python', 'pruning/fine_tune.py', 'best_sampled.caffemodel', finetune_net,
-               best_sampled_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset, network]
+    prune(network, original_caffemodel, original_prototxt, best_sampled_caffemodel, pruning_dict)
+
+    return
+
+    command = ['python', 'pruning/fine_tune.py', best_sampled_caffemodel, finetune_net,
+               finetuned_caffemodel, local_config, finetune_solver, finetuning_logfile, dataset, network]
     os.system(' '.join(command))
     logging.debug(' '.join(command))
-    if not os.path.exists(best_sampled_caffemodel):
+    if not os.path.exists(finetuned_caffemodel):
         logging.error('Cannot find the finetuned caffemodel')
 
     # find acc/iter information in fine-tuning
@@ -106,7 +109,7 @@ def parse_config_file(config_file):
             original_latency = 238
         else:
             # i7-7700 CPU @ 3.6original_latenci0GHz 207
-            original_latency = 238
+            original_latency = 207
     else:
         assert True
 
@@ -117,7 +120,7 @@ def main():
     interval = 0.001
     config_file = 'cfp.config'
 
-    constraint, original_latency =  parse_config_file(config_file)
+    constraint, original_latency = parse_config_file(config_file)
     output_folder = 'results/B_{:.0f}_interval_{}_{}'.format(constraint, interval, dataset)
 
     trial = 1
@@ -132,17 +135,19 @@ def main():
     copyfile(config_file, local_config)
     finetune_solver = os.path.join(output_folder, 'finetune_solver.prototxt')
     best_sampled_caffemodel = os.path.join(output_folder, 'best_sampled.caffemodel')
+    finetuned_caffemodel = os.path.join(output_folder, 'finetuned.caffemodel')
     finetuning_logfile = os.path.join(output_folder, 'finetuning.log')
     log_file = os.path.join(output_folder, 'binary_search.log')
     logging.basicConfig(filename=log_file, filemode='w', level=logging.INFO,
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    logging.info('create log file')
 
     while not test_env(original_latency, original_caffemodel, 10000):
         logging.warning('Environment abnormal. Sleep for 3 seconds')
         time.sleep(3)
 
     pruning_percentage = binary_search(constraint, interval)
-    prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuning_logfile)
+    prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuned_caffemodel, finetuning_logfile)
 
 
 def test_env(original_latency, input_caffemodel, last_constraint):

@@ -266,11 +266,11 @@ def test_accuracy(prototxt_file, temp_caffemodel_file, iterations, look_ahead, n
     # read accuracy from output_file
     with open(output_file) as fo:
         if network == 'alexnet':
-            pattern = r"accuracy = (0\.\d+)"
+            pattern = r"accuracy = (0\.?\d*)"
         elif network == 'resnet':
-            pattern = r"top-1 = (0\.\d+)"
+            pattern = r"top-1 = (0\.?\d*)"
         elif network == 'googlenet':
-            pattern = r"loss3/top-1 = (0\.\d+)"
+            pattern = r"loss3/top-1 = (0\.?\d*)"
         text = fo.read()
         accuracy = re.findall(pattern, text)
         if len(accuracy) == 0:
