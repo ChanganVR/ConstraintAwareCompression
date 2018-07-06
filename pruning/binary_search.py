@@ -29,37 +29,39 @@ def check_constraint(constraint, pruning_percentage):
     return latency < constraint
 
 
-# def binary_search(constraint, interval):
-#     left = 0.5
-#     right = 1
-#
-#     while right - left > interval:
-#         mid = (left+right)/2
-#         satisfied = check_constraint(constraint, mid)
-#         if satisfied:
-#             right = mid
-#         else:
-#             left = mid
-#
-#     if right == 1:
-#         logging.error('Solution not found')
-#
-#     return right
-
-
 def binary_search(constraint, interval):
+    # keeps shrinking the interval until the length is less than certain number
     left = 0.5
     right = 1
 
-    while right - left > 0.01:
+    while right - left > interval:
         mid = (left+right)/2
         satisfied = check_constraint(constraint, mid)
         if satisfied:
-            return mid
+            right = mid
         else:
             left = mid
 
-    return -1
+    if right == 1:
+        logging.error('Solution not found')
+
+    return right
+
+
+#def binary_search(constraint, interval):
+#    # return once a number satisfying the constraint is found
+#    left = 0.5
+#    right = 1
+#
+#    while right - left > 0.01:
+#        mid = (left+right)/2
+#        satisfied = check_constraint(constraint, mid)
+#        if satisfied:
+#            return mid
+#        else:
+#            left = mid
+#
+#    return -1
 
 
 def prune_and_finetune(pruning_percentage, local_config, finetune_solver, best_sampled_caffemodel, finetuned_caffemodel, finetuning_logfile):
