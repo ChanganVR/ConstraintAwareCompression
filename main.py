@@ -70,7 +70,7 @@ num_threads = 4
 init_points = 20
 # fixed hyper parameters
 if network == 'alexnet':
-    batch_size = 32
+    # batch_size = 32
     if dataset == 'imagenet':
         # i7-4790 CPU @ 3.60GHz
         original_latency = 238
@@ -78,13 +78,13 @@ if network == 'alexnet':
         # i7-7700 CPU @ 3.60GHz
         original_latency = 207
 elif network == 'resnet':
-    batch_size = 16
+    # batch_size = 16
     if dataset == 'imagenet':
         original_latency = 1124
     else:
         raise NotImplementedError
 elif network == 'googlenet':
-    batch_size = 32
+    # batch_size = 32
     if dataset == 'imagenet':
         original_latency = 524
     else:
