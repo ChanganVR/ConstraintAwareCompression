@@ -1,14 +1,13 @@
 # Constraint-Aware Deep Neural Network Compression
 Given a real-time operational constraints, this library can
 automatically compress the network to satisfy the constraint while
-preserving the accuracy. This library is built on top of[SkimCaffe](https://github.com/IntelLabs/SkimCaffe),
+preserving the accuracy. This library is built on top of [SkimCaffe](https://github.com/IntelLabs/SkimCaffe),
 which has implemented direct sparse convolution operations and has an effective
 speedup given an input sparse network. This framework can be applied to
 different constraint types(latency, memory size), different network(Alexnet,
 Resnet, Googlenet) and different datasets(ImagenNet, DTD).
 
-For more technical details, please refer to the paper [Constraint-Aware Deep Neural Network
-Compression](http://changan.io/constraint_aware_compression.pdf).
+For more technical details, please refer to the [paper](http://changan.io/constraint_aware_compression.pdf).
 
 ![Framework Overview](data/imgs/model.png)
 
@@ -24,6 +23,11 @@ python2 main.py
 ```
 python2 pruning/visualize_cbo_results.py [OUTPUT_DIR]
 ```
+
+## Results
+### Visualization of sampled data points in the first exponential cooling step
+![sampling](data/imgs/sampling.png)
+
 
 ## Citation
 If you use this code or ideas from the paper for your research, please cite our paper:
